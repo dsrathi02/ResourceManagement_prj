@@ -1,1 +1,0 @@
-// login.js — kept for legacy reference; logic is now inline in login.html

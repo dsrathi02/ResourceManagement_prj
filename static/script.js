@@ -1,1 +1,0 @@
-// script.js — kept for legacy reference; dashboard logic is now inline in index.html
