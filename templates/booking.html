@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+{% block title %}Book a Resource{% endblock %}
+{% block meta_desc %}Reserve a lab, conference room, or projector for your event.{% endblock %}
+
+{% block content %}
+<div class="page-hero hero-success">
+  <div class="container">
+    <div class="hero-eyebrow">📋 Reservation</div>
+    <h1>Book a Resource</h1>
+    <p>Select a resource, pick your time slot, and optionally link it to a campus event.</p>
+  </div>
+</div>
+
+<div class="container">
+  <section class="section">
+
+    {% if error %}
+    <div class="auth-error" style="margin-bottom:24px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" id="bookingForm">
+    <div class="booking-layout">
+
+      <!-- ── Form ── -->
+      <div class="card">
+        <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:24px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1.3rem;">🖥️</span> Booking Details
+        </h2>
+
+        <!-- Resource -->
+        <div class="form-group">
+          <label class="form-label" for="resource_id">Resource *</label>
+          <div class="input-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <select id="resource_id" name="resource_id" class="form-select has-icon" required>
+              <option value="" disabled selected>— Select a resource —</option>
+              {% for r in resources %}
+              <option value="{{ r.resource_id }}"
+                data-name="{{ r.resource_name }}"
+                data-loc="{{ r.location }}"
+                data-cap="{{ r.capacity or '' }}"
+                {% if preselect_resource and preselect_resource | int == r.resource_id %}selected{% endif %}>
+                {{ r.resource_name }} — {{ r.location }}{% if r.capacity %} (Cap: {{ r.capacity }}){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Date -->
+        <div class="form-group">
+          <label class="form-label" for="date">Date *</label>
+          <div class="input-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <input type="date" id="date" name="date" class="form-input has-icon" required/>
+          </div>
+        </div>
+
+        <!-- Time Row -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="start_time">Start Time *</label>
+            <div class="input-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <input type="time" id="start_time" name="start_time" class="form-input has-icon" required value="09:00"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="end_time">End Time *</label>
+            <div class="input-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <input type="time" id="end_time" name="end_time" class="form-input has-icon" required value="11:00"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Event (optional) -->
+        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;margin-bottom:18px;">
+          <div style="font-size:.8rem;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">📅 Link to Event (Optional)</div>
+
+          <div class="form-group">
+            <label class="form-label" for="event_id">Select Existing Event</label>
+            <div class="input-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+              <select id="event_id" name="event_id" class="form-select has-icon">
+                <option value="">— None (standalone booking) —</option>
+                {% for e in events %}
+                <option value="{{ e.event_id }}"
+                  {% if preselect_event and preselect_event | int == e.event_id %}selected{% endif %}>
+                  {{ e.event_name }} ({{ e.date | fmt_date }})
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="divider-label">or create new</div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="event_name">New Event Name</label>
+            <div class="input-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <input type="text" id="event_name" name="event_name" class="form-input has-icon" placeholder="e.g. Tech Workshop 2026"/>
+            </div>
+            <span class="form-hint">If filled, a new event will be created and linked automatically.</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="submitBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Confirm Booking
+        </button>
+        <p style="text-align:center;font-size:.78rem;color:var(--text-3);margin-top:10px;">Booking status will be <strong>Pending</strong> until admin approves.</p>
+      </div>
+
+      <!-- ── Summary Panel ── -->
+      <div class="booking-summary">
+        <div class="bs-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Booking Summary
+        </div>
+        <div class="bs-row"><span class="bs-label">Resource</span><span class="bs-val" id="sumResource">—</span></div>
+        <div class="bs-row"><span class="bs-label">Location</span><span class="bs-val" id="sumLocation">—</span></div>
+        <div class="bs-row"><span class="bs-label">Capacity</span><span class="bs-val" id="sumCap">—</span></div>
+        <div class="bs-row"><span class="bs-label">Date</span><span class="bs-val" id="sumDate">—</span></div>
+        <div class="bs-row"><span class="bs-label">Start</span><span class="bs-val" id="sumStart">—</span></div>
+        <div class="bs-row"><span class="bs-label">End</span><span class="bs-val" id="sumEnd">—</span></div>
+        <div class="bs-row"><span class="bs-label">Duration</span><span class="bs-val" id="sumDur">—</span></div>
+        <div class="bs-row"><span class="bs-label">Booked By</span><span class="bs-val">{{ session.get('name','') }}</span></div>
+        <div class="bs-row" style="border-bottom:none;margin-top:4px;">
+          <span class="bs-label">Status</span>
+          <span class="pill pill-pending">Pending</span>
+        </div>
+
+        <div style="margin-top:20px;padding:14px;background:var(--primary-muted);border-radius:var(--r);border:1px solid var(--border-2);">
+          <p style="font-size:.78rem;color:var(--text-2);line-height:1.6;">
+            ℹ️ Bookings are placed in <strong>Pending</strong> status and require admin approval. Track status in My Bookings.
+          </p>
+        </div>
+      </div>
+
+    </div>
+    </form>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       BOOKING HISTORY
+       ════════════════════════════════════════════════════════ -->
+  <section class="section-sm" style="border-top:1px solid var(--border);padding-top:40px;margin-top:8px;">
+
+    <!-- Header row with period toggle -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:24px;">
+      <div>
+        <div class="section-label">🕒 History</div>
+        <div class="section-title" style="font-size:1.25rem;">My Recent Bookings</div>
+      </div>
+
+      <!-- Period Toggle Pills -->
+      <div class="bh-period-toggle">
+        <a href="/booking?period=week"
+           class="bh-period-btn {{ 'active' if period == 'week' else '' }}"
+           id="btnWeek">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Past Week
+        </a>
+        <a href="/booking?period=month"
+           class="bh-period-btn {{ 'active' if period == 'month' else '' }}"
+           id="btnMonth">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          Past Month
+        </a>
+        <a href="/my-bookings" class="bh-period-btn" style="margin-left:6px;">
+          View All →
+        </a>
+      </div>
+    </div>
+
+    <!-- Summary mini-stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px;">
+      {% set hist_conf = booking_history | selectattr('booking_status','equalto','confirmed') | list | length %}
+      {% set hist_pend = booking_history | selectattr('booking_status','equalto','pending')   | list | length %}
+      {% set hist_canc = booking_history | selectattr('booking_status','equalto','cancelled') | list | length %}
+
+      <div class="bh-mini-stat">
+        <div class="bh-mini-num">{{ booking_history | length }}</div>
+        <div class="bh-mini-lbl">🗂️ Total</div>
+      </div>
+      <div class="bh-mini-stat" style="border-color:rgba(5,150,105,.25);">
+        <div class="bh-mini-num" style="color:var(--success)">{{ hist_conf }}</div>
+        <div class="bh-mini-lbl">✅ Confirmed</div>
+      </div>
+      <div class="bh-mini-stat" style="border-color:rgba(217,119,6,.25);">
+        <div class="bh-mini-num" style="color:var(--warning)">{{ hist_pend }}</div>
+        <div class="bh-mini-lbl">⏳ Pending</div>
+      </div>
+      <div class="bh-mini-stat" style="border-color:rgba(220,38,38,.25);">
+        <div class="bh-mini-num" style="color:var(--danger)">{{ hist_canc }}</div>
+        <div class="bh-mini-lbl">❌ Cancelled</div>
+      </div>
+    </div>
+
+    {% if booking_history %}
+
+    <!-- Status filter tabs -->
+    <div class="bh-tabs" id="bhTabs">
+      <button class="bh-tab active" data-filter="all">All <span class="bh-tab-count">{{ booking_history | length }}</span></button>
+      <button class="bh-tab" data-filter="confirmed">Confirmed <span class="bh-tab-count">{{ hist_conf }}</span></button>
+      <button class="bh-tab" data-filter="pending">Pending <span class="bh-tab-count">{{ hist_pend }}</span></button>
+      <button class="bh-tab" data-filter="cancelled">Cancelled <span class="bh-tab-count">{{ hist_canc }}</span></button>
+    </div>
+
+    <!-- History Cards -->
+    <div class="bh-cards" id="bhCards">
+      {% for b in booking_history %}
+      <div class="bh-card animate-in" style="animation-delay:{{ loop.index0 * 0.05 }}s" data-status="{{ b.booking_status }}">
+        <!-- Left: status stripe -->
+        <div class="bh-stripe {{ b.booking_status }}"></div>
+
+        <!-- Middle: info -->
+        <div class="bh-info">
+          <div class="bh-resource">{{ b.resource_name }}</div>
+          <div class="bh-location">📍 {{ b.location }}</div>
+          {% if b.event_name %}
+          <div class="bh-event">📅 {{ b.event_name }}</div>
+          {% endif %}
+        </div>
+
+        <!-- Right: time + status -->
+        <div class="bh-time-block">
+          <div class="bh-time-row">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {{ b.start_datetime | replace(' ', ' · ') | truncate(20, True, '') }}
+          </div>
+          <div class="bh-time-row bh-time-end">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            {{ b.end_datetime | replace(' ', ' · ') | truncate(20, True, '') }}
+          </div>
+          <span class="pill pill-{{ b.booking_status }}" style="margin-top:8px;">{{ b.booking_status | capitalize }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div id="bhNoMatch" class="empty-state" style="display:none;padding:32px 0;">
+      <div class="empty-state-icon" style="font-size:2rem;">🔍</div>
+      <h3>No {{ '' }} bookings in this filter</h3>
+    </div>
+
+    {% else %}
+    <div class="empty-state" style="padding:40px 0;background:var(--surface-2);border-radius:var(--r-xl);border:1px solid var(--border);">
+      <div class="empty-state-icon">📋</div>
+      <h3>No bookings in the past {{ 'week' if period == 'week' else 'month' }}</h3>
+      <p>Your recent bookings will appear here once you make some reservations.</p>
+    </div>
+    {% endif %}
+
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Booking History Styles ──────────────────────────── */
+.bh-period-toggle {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--r-pill); padding: 5px;
+}
+.bh-period-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: var(--r-pill);
+  font-size: .8rem; font-weight: 600; color: var(--text-2);
+  transition: all .15s; white-space: nowrap;
+}
+.bh-period-btn:hover { color: var(--text); background: var(--surface); }
+.bh-period-btn.active {
+  background: var(--primary); color: #fff;
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+/* Mini stats */
+.bh-mini-stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 14px 16px; text-align: center;
+  transition: all .2s;
+}
+.bh-mini-stat:hover { box-shadow: var(--shadow-sm); }
+.bh-mini-num { font-size: 1.6rem; font-weight: 800; color: var(--text); line-height: 1; }
+.bh-mini-lbl { font-size: .72rem; color: var(--text-3); margin-top: 4px; font-weight: 500; }
+
+/* Tabs */
+.bh-tabs {
+  display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.bh-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border-radius: var(--r-sm);
+  font-size: .82rem; font-weight: 600;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-2); cursor: pointer; transition: all .15s;
+}
+.bh-tab:hover  { border-color: var(--primary); color: var(--primary); }
+.bh-tab.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+.bh-tab-count {
+  background: var(--surface-3); color: var(--text-3);
+  border-radius: var(--r-pill); padding: 1px 8px; font-size: .7rem; font-weight: 700;
+}
+.bh-tab.active .bh-tab-count { background: var(--primary); color: #fff; }
+
+/* History cards */
+.bh-cards { display: flex; flex-direction: column; gap: 10px; }
+.bh-card {
+  display: flex; align-items: stretch; gap: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); overflow: hidden;
+  transition: all .2s; box-shadow: var(--shadow-xs);
+}
+.bh-card:hover { box-shadow: var(--shadow-md); transform: translateX(3px); }
+
+/* Coloured left stripe */
+.bh-stripe        { width: 4px; flex-shrink: 0; }
+.bh-stripe.confirmed { background: var(--success); }
+.bh-stripe.pending   { background: var(--warning); }
+.bh-stripe.cancelled { background: var(--danger); }
+
+.bh-info {
+  flex: 1; padding: 14px 18px; display: flex;
+  flex-direction: column; gap: 4px; min-width: 0;
+}
+.bh-resource { font-size: .95rem; font-weight: 700; color: var(--text); }
+.bh-location { font-size: .78rem; color: var(--text-3); }
+.bh-event    { font-size: .78rem; color: var(--primary); font-weight: 500; }
+
+.bh-time-block {
+  padding: 14px 18px; display: flex; flex-direction: column;
+  align-items: flex-end; justify-content: center; gap: 4px;
+  flex-shrink: 0; border-left: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.bh-time-row {
+  display: flex; align-items: center; gap: 5px;
+  font-size: .74rem; color: var(--text-2); white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.bh-time-end { color: var(--text-3); }
+.bh-time-row svg { color: var(--text-3); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Date Pre-fill ──────────────────── */
+const dateInput = document.getElementById('date');
+const today = new Date().toISOString().split('T')[0];
+dateInput.min = today;
+if (!dateInput.value) dateInput.value = today;
+
+/* ── Live Booking Summary ───────────── */
+const rSel  = document.getElementById('resource_id');
+const dInp  = document.getElementById('date');
+const stInp = document.getElementById('start_time');
+const etInp = document.getElementById('end_time');
+
+function fmt12(t) {
+  if (!t) return '—';
+  const [h,m] = t.split(':').map(Number);
+  const ap = h >= 12 ? 'PM' : 'AM';
+  return `${h % 12 || 12}:${String(m).padStart(2,'0')} ${ap}`;
+}
+function calcDur(st, et) {
+  if (!st || !et) return '—';
+  const [sh,sm] = st.split(':').map(Number);
+  const [eh,em] = et.split(':').map(Number);
+  const mins = (eh*60+em) - (sh*60+sm);
+  if (mins <= 0) return 'Invalid';
+  const h = Math.floor(mins/60), m = mins%60;
+  return h ? `${h}h${m ? ' ' + m + 'm' : ''}` : `${m}m`;
+}
+function updateSummary() {
+  const opt = rSel.options[rSel.selectedIndex];
+  document.getElementById('sumResource').textContent = opt?.dataset?.name || '—';
+  document.getElementById('sumLocation').textContent = opt?.dataset?.loc  || '—';
+  document.getElementById('sumCap').textContent      = opt?.dataset?.cap ? `${opt.dataset.cap} people` : '—';
+  const d = dInp.value;
+  if (d) {
+    const p = d.split('-');
+    const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    document.getElementById('sumDate').textContent = `${m[+p[1]-1]} ${+p[2]}, ${p[0]}`;
+  }
+  document.getElementById('sumStart').textContent = fmt12(stInp.value);
+  document.getElementById('sumEnd').textContent   = fmt12(etInp.value);
+  document.getElementById('sumDur').textContent   = calcDur(stInp.value, etInp.value);
+}
+[rSel, dInp, stInp, etInp].forEach(el => el.addEventListener('change', updateSummary));
+[stInp, etInp].forEach(el => el.addEventListener('input', updateSummary));
+if (rSel.value) updateSummary();
+
+/* ── Booking History Tabs ───────────── */
+const bhRows   = document.querySelectorAll('.bh-card');
+const bhNoMsg  = document.getElementById('bhNoMatch');
+let bhFilter = 'all';
+
+function filterHistory() {
+  let vis = 0;
+  bhRows.forEach(c => {
+    const show = bhFilter === 'all' || c.dataset.status === bhFilter;
+    c.style.display = show ? '' : 'none';
+    if (show) vis++;
+  });
+  if (bhNoMsg) bhNoMsg.style.display = vis ? 'none' : 'block';
+}
+
+document.querySelectorAll('.bh-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.bh-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    bhFilter = tab.dataset.filter;
+    filterHistory();
+  });
+});
+
+/* ── Event / Name mutual disable ─────── */
+document.getElementById('event_id').addEventListener('change', function() {
+  document.getElementById('event_name').disabled = !!this.value;
+  if (this.value) document.getElementById('event_name').value = '';
+});
+document.getElementById('event_name').addEventListener('input', function() {
+  const sel = document.getElementById('event_id');
+  if (this.value) { sel.disabled = true; sel.value = ''; }
+  else sel.disabled = false;
+});
+
+/* ── Submit loading state ────────────── */
+document.getElementById('bookingForm').addEventListener('submit', () => {
+  const btn = document.getElementById('submitBtn');
+  btn.innerHTML = '<svg class="spin-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Processing…';
+  btn.disabled = true;
+});
+</script>
+{% endblock %}

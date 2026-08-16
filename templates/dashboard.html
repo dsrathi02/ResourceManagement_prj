@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block meta_desc %}Reserva Dashboard — Your campus booking home.{% endblock %}
+
+{% block content %}
+<!-- ── Welcome Hero ──────────────────────────────────────────────── -->
+<div class="page-hero" style="padding:40px 0 36px;">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;">
+      <div>
+        <div class="hero-eyebrow">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--primary);animation:pulse 2s infinite;"></span>
+          Campus Portal
+        </div>
+        <h1 style="font-size:2rem;font-weight:900;color:var(--text);margin-bottom:6px;">
+          Welcome back, {{ session.get('name','').split(' ')[0] }}! 👋
+        </h1>
+        <p style="color:var(--text-2);">{{ session.get('department','') }} · {{ session.get('role','') }} · {{ session.get('email','') }}</p>
+      </div>
+      <a href="/booking" class="btn btn-primary btn-lg">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Book a Resource
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── Stats Strip ── -->
+  <div class="stats-grid" style="margin-top:32px;">
+    <div class="stat-card indigo animate-in" style="animation-delay:.05s">
+      <div class="stat-icon indigo">🖥️</div>
+      <div class="stat-value">{{ avail_resources }}</div>
+      <div class="stat-label">Resources Available</div>
+    </div>
+    <div class="stat-card amber animate-in" style="animation-delay:.1s">
+      <div class="stat-icon amber">📅</div>
+      <div class="stat-value">{{ upcoming_count }}</div>
+      <div class="stat-label">Upcoming Events</div>
+    </div>
+    <div class="stat-card success animate-in" style="animation-delay:.15s">
+      <div class="stat-icon success">📋</div>
+      <div class="stat-value">{{ my_bookings_count }}</div>
+      <div class="stat-label">My Bookings</div>
+    </div>
+    {% if session.get('role') in ['Admin','Faculty','Dean'] %}
+    <div class="stat-card danger animate-in" style="animation-delay:.2s">
+      <div class="stat-icon danger">⏳</div>
+      <div class="stat-value">{{ pending_count }}</div>
+      <div class="stat-label">Pending Approvals</div>
+    </div>
+    {% else %}
+    <div class="stat-card purple animate-in" style="animation-delay:.2s">
+      <div class="stat-icon purple">🎓</div>
+      <div class="stat-value">{{ session.get('department','—') }}</div>
+      <div class="stat-label" style="font-size:.7rem;">Department</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Upcoming Events ── -->
+  <section class="section-sm">
+    <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div class="section-label">📅 Schedule</div>
+        <div class="section-title">Upcoming Events</div>
+      </div>
+      <a href="/events" class="btn btn-secondary btn-sm">View All Events →</a>
+    </div>
+
+    {% if upcoming_events %}
+    <div class="upcoming-grid">
+      {% for e in upcoming_events %}
+      <div class="upcoming-card animate-in" style="animation-delay:{{ loop.index0 * 0.08 }}s">
+        <div class="uc-date-badge">
+          <div class="uc-month">{{ e.date | month_name }}</div>
+          <div class="uc-day">{{ e.date | day_num }}</div>
+        </div>
+        <div class="uc-info">
+          <div class="uc-name" title="{{ e.event_name }}">{{ e.event_name }}</div>
+          <div class="uc-loc">📍 {{ e.location or '—' }}</div>
+        </div>
+        <a href="/events/{{ e.event_id }}" class="btn btn-secondary btn-sm" style="flex-shrink:0;">View</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">📅</div>
+      <h3>No upcoming events</h3>
+      <p>Check back later or visit the events page.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- ── Two Column: Quick Booking + Announcements ── -->
+  <section class="section-sm" style="display:grid;grid-template-columns:1fr 380px;gap:28px;align-items:start;">
+
+    <!-- Quick Resource Booking -->
+    <div>
+      <div class="section-header">
+        <div class="section-label">⚡ Quick Access</div>
+        <div class="section-title">Available Resources</div>
+        <div class="section-sub">Click Book to reserve instantly</div>
+      </div>
+      {% if quick_resources %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
+        {% for r in quick_resources %}
+        {% set icon = '💻' if 'lab' in r.resource_name.lower() or 'computer' in r.resource_name.lower()
+                      else '🏛️' if 'conference' in r.resource_name.lower()
+                      else '🎙️' if 'seminar' in r.resource_name.lower()
+                      else '📽️' if 'projector' in r.resource_name.lower()
+                      else '📦' %}
+        <div class="resource-card animate-in" style="animation-delay:{{ loop.index0 * 0.06 }}s">
+          <div class="rc-top">
+            <div class="rc-icon lab">{{ icon }}</div>
+            <span class="pill pill-available">
+              <span style="width:5px;height:5px;border-radius:50%;background:var(--success);animation:pulse 1.8s infinite;margin-right:0;"></span>
+              Available
+            </span>
+          </div>
+          <div class="rc-name">{{ r.resource_name }}</div>
+          <div class="rc-meta">
+            <div class="rc-row">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              {{ r.location }}
+            </div>
+            <div class="rc-row">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              Capacity: {{ r.capacity or '—' }}
+            </div>
+          </div>
+          <a href="/booking?resource_id={{ r.resource_id }}" class="btn-book">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+            Book Now
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="empty-state-icon">🖥️</div><h3>No resources available</h3></div>
+      {% endif %}
+    </div>
+
+    <!-- Campus Announcements -->
+    <div>
+      <div class="section-header">
+        <div class="section-label">📢 Notice Board</div>
+        <div class="section-title">Announcements</div>
+      </div>
+      {% if announcements %}
+      <div class="announcements-list">
+        {% for ann in announcements %}
+        <div class="announcement-item {{ ann.priority }} animate-in" style="animation-delay:{{ loop.index0 * 0.1 }}s">
+          <div class="ann-icon">
+            {% if ann.priority == 'urgent' %}🔴{% elif ann.priority == 'high' %}🟡{% else %}🔵{% endif %}
+          </div>
+          <div class="ann-content">
+            <div class="ann-title">{{ ann.title }}</div>
+            <div class="ann-body">{{ ann.body }}</div>
+            <div class="ann-footer">
+              <span class="pill pill-{{ ann.priority }}">{{ ann.priority | capitalize }}</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card" style="text-align:center;padding:32px;">
+        <div style="font-size:2.5rem;margin-bottom:10px;opacity:.4;">📢</div>
+        <p style="color:var(--text-2);font-size:.875rem;">No announcements yet.<br>Run <code>db_update.sql</code> to load sample data.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </section>
+
+</div><!-- /container -->
+{% endblock %}

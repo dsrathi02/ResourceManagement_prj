@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}{{ event.event_name }}{% endblock %}
+{% block meta_desc %}{{ event.event_name }} — {{ event.date | fmt_date }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Event Hero ── -->
+<div class="event-detail-hero" style="border-bottom:1px solid var(--border);padding:48px 0 40px;position:relative;overflow:hidden;">
+  <div style="position:absolute;inset:0;background:radial-gradient(circle at 70% 50%, rgba(245,158,11,.08) 0%,transparent 60%);"></div>
+  <div class="container" style="position:relative;z-index:1;">
+    <a href="/events" style="display:inline-flex;align-items:center;gap:6px;color:var(--text-3);font-size:.82rem;margin-bottom:20px;transition:color .15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-3)'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to Events
+    </a>
+
+    <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
+      <div style="width:72px;height:72px;background:var(--grad-amber);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;flex-shrink:0;box-shadow:0 6px 20px rgba(245,158,11,.4);">
+        <span style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;opacity:.85;">{{ event.date | month_name }}</span>
+        <span style="font-size:1.9rem;font-weight:900;line-height:1;">{{ event.date | day_num }}</span>
+      </div>
+      <div style="flex:1;">
+        <h1 style="font-size:2rem;font-weight:900;color:var(--text);line-height:1.2;margin-bottom:10px;">{{ event.event_name }}</h1>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;">
+          <span style="display:flex;align-items:center;gap:6px;font-size:.875rem;color:var(--text-2);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            {{ event.date | fmt_date }}{% if event.end_date and event.end_date != event.date %} – {{ event.end_date | fmt_date }}{% endif %}
+          </span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:.875rem;color:var(--text-2);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            {{ event.location or 'TBD' }}
+          </span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:.875rem;color:var(--text-2);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            {{ event.organiser or 'TBD' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <section class="section">
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:28px;align-items:start;">
+
+      <!-- Main info -->
+      <div>
+        <!-- Info cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:32px;">
+          <div class="card card-sm animate-in">
+            <div style="font-size:.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700;">📅 Start Date</div>
+            <div style="font-weight:700;color:var(--text);">{{ event.date | fmt_date }}</div>
+          </div>
+          {% if event.end_date and event.end_date != event.date %}
+          <div class="card card-sm animate-in" style="animation-delay:.05s">
+            <div style="font-size:.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700;">🏁 End Date</div>
+            <div style="font-weight:700;color:var(--text);">{{ event.end_date | fmt_date }}</div>
+          </div>
+          {% endif %}
+          <div class="card card-sm animate-in" style="animation-delay:.08s">
+            <div style="font-size:.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700;">📍 Location</div>
+            <div style="font-weight:700;color:var(--text);">{{ event.location or 'TBD' }}</div>
+          </div>
+          <div class="card card-sm animate-in" style="animation-delay:.12s">
+            <div style="font-size:.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700;">👤 Organiser</div>
+            <div style="font-weight:700;color:var(--text);">{{ event.organiser or 'TBD' }}</div>
+          </div>
+        </div>
+
+        {% if event.description %}
+        <div class="card animate-in" style="animation-delay:.16s;margin-bottom:28px;">
+          <div style="font-size:.75rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px;">📝 Description</div>
+          <p style="color:var(--text-2);line-height:1.7;font-size:.9rem;">{{ event.description }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Resources Used -->
+        <div class="section-header" style="margin-bottom:18px;">
+          <div class="section-label">🖥️ Resources</div>
+          <div class="section-title" style="font-size:1.2rem;">Resources Used for this Event</div>
+        </div>
+
+        {% if resources_used %}
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
+          {% for r in resources_used %}
+          {% set icon = '💻' if 'lab' in r.resource_name.lower() or 'computer' in r.resource_name.lower()
+                        else '🏛️' if 'conference' in r.resource_name.lower()
+                        else '🎙️' if 'seminar' in r.resource_name.lower()
+                        else '📽️' if 'projector' in r.resource_name.lower()
+                        else '📦' %}
+          <div class="resource-card animate-in" style="animation-delay:{{ loop.index0 * 0.07 }}s">
+            <div class="rc-top">
+              <div class="rc-icon lab">{{ icon }}</div>
+              <span class="pill {{ 'pill-available' if r.status == 'Available' else 'pill-cancelled' }}">{{ r.status }}</span>
+            </div>
+            <div class="rc-name">{{ r.resource_name }}</div>
+            <div class="rc-meta">
+              <div class="rc-row"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>{{ r.location }}</div>
+              {% if r.capacity %}<div class="rc-row"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Capacity: {{ r.capacity }}</div>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding:40px 20px;">
+          <div class="empty-state-icon">🖥️</div>
+          <h3>No resources booked yet</h3>
+          <p>Be the first to book a resource for this event.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Sidebar: Actions -->
+      <div style="position:sticky;top:84px;">
+        <div class="card">
+          <div style="font-size:.85rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:7px;">
+            <span style="font-size:1.1rem;">📋</span> Quick Actions
+          </div>
+          <a href="/booking?event_id={{ event.event_id }}" class="btn btn-primary btn-full" style="margin-bottom:10px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Book Resource for this Event
+          </a>
+          <a href="/resources-page" class="btn btn-secondary btn-full">
+            Browse All Resources
+          </a>
+
+          <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+            <div style="font-size:.72rem;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px;">Event Summary</div>
+            <div style="font-size:.84rem;color:var(--text-2);display:flex;flex-direction:column;gap:7px;">
+              <div>🆔 Event ID: <strong style="color:var(--text);">#{{ event.event_id }}</strong></div>
+              <div>📍 {{ event.location or 'Location TBD' }}</div>
+              <div>👤 {{ event.organiser or 'Organiser TBD' }}</div>
+              <div>🖥️ {{ resources_used | length }} resource(s) booked</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</div>
+{% endblock %}

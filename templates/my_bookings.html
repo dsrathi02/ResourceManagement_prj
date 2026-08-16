@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}My Bookings{% endblock %}
+{% block meta_desc %}View and manage all your campus resource reservations.{% endblock %}
+
+{% block content %}
+<div class="page-hero hero-purple">
+  <div class="container">
+    <div class="hero-eyebrow">📋 My Reservations</div>
+    <h1>My Bookings</h1>
+    <p>Track all your resource reservations and their approval status in one place.</p>
+  </div>
+</div>
+
+<div class="container">
+  <section class="section">
+
+    {% if success_id %}
+    <div style="background:var(--success-light);border:1px solid rgba(5,150,105,.3);border-radius:var(--r-lg);padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px;animation:fadeUp .3s ease;">
+      <span style="font-size:1.4rem;">🎉</span>
+      <div>
+        <div style="font-weight:700;color:var(--success);">Booking Placed Successfully!</div>
+        <div style="font-size:.855rem;color:var(--success);opacity:.8;">Booking #{{ success_id }} is now pending admin approval.</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Stats -->
+    <div class="stats-grid" style="margin-bottom:28px;">
+      <div class="stat-card indigo">
+        <div class="stat-icon indigo">📋</div>
+        <div class="stat-value">{{ bookings | length }}</div>
+        <div class="stat-label">Total Bookings</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-icon success">✅</div>
+        <div class="stat-value">{{ bookings | selectattr('booking_status','equalto','confirmed') | list | length }}</div>
+        <div class="stat-label">Confirmed</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-icon amber">⏳</div>
+        <div class="stat-value">{{ bookings | selectattr('booking_status','equalto','pending') | list | length }}</div>
+        <div class="stat-label">Pending</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-icon danger">❌</div>
+        <div class="stat-value">{{ bookings | selectattr('booking_status','equalto','cancelled') | list | length }}</div>
+        <div class="stat-label">Cancelled</div>
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="booking-tabs" id="bookingTabs" style="margin-bottom:24px;">
+      <button class="booking-tab active" data-filter="all"       id="tabAll">All</button>
+      <button class="booking-tab"        data-filter="confirmed" id="tabConf">✅ Confirmed</button>
+      <button class="booking-tab"        data-filter="pending"   id="tabPend">⏳ Pending</button>
+      <button class="booking-tab"        data-filter="cancelled" id="tabCanc">❌ Cancelled</button>
+    </div>
+
+    {% if bookings %}
+    <div class="table-wrapper">
+      <table class="data-table" id="bookingsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Resource</th>
+            <th>Location</th>
+            <th>Event</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in bookings %}
+          <tr data-status="{{ b.booking_status }}">
+            <td style="font-weight:700;color:var(--text-3);">#{{ b.booking_id }}</td>
+            <td><strong>{{ b.resource_name }}</strong></td>
+            <td style="color:var(--text-2);font-size:.82rem;">{{ b.location }}</td>
+            <td style="color:var(--text-2);font-size:.82rem;">{{ b.event_name or '—' }}</td>
+            <td style="font-size:.82rem;font-variant-numeric:tabular-nums;">{{ b.start_datetime }}</td>
+            <td style="font-size:.82rem;font-variant-numeric:tabular-nums;">{{ b.end_datetime }}</td>
+            <td>
+              <span class="pill pill-{{ b.booking_status }}">{{ b.booking_status | capitalize }}</span>
+            </td>
+            <td>
+              {% if b.booking_status != 'cancelled' %}
+              <form method="POST" action="/cancel-my-booking/{{ b.booking_id }}"
+                    onsubmit="return confirm('Cancel booking #{{ b.booking_id }}?')">
+                <button type="submit" class="btn btn-danger btn-sm">Cancel</button>
+              </form>
+              {% else %}
+              <span style="color:var(--text-3);font-size:.78rem;">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div id="noBookings" class="empty-state" style="display:none;">
+      <div class="empty-state-icon">🔍</div>
+      <h3>No bookings match this filter</h3>
+      <p>Try selecting a different status tab.</p>
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">📋</div>
+      <h3>No bookings yet</h3>
+      <p>You haven't made any resource reservations. Start by browsing available resources.</p>
+      <a href="/resources-page" class="btn btn-primary" style="margin-top:16px;">Browse Resources</a>
+    </div>
+    {% endif %}
+
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const rows    = document.querySelectorAll('#bookingsTable tbody tr');
+const noMsg   = document.getElementById('noBookings');
+let activeTab = 'all';
+
+function filterTable() {
+  let visible = 0;
+  rows.forEach(r => {
+    const status = r.dataset.status;
+    const show   = activeTab === 'all' || status === activeTab;
+    r.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  if (noMsg) noMsg.style.display = visible ? 'none' : 'block';
+}
+
+document.querySelectorAll('.booking-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.booking-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeTab = tab.dataset.filter;
+    filterTable();
+  });
+});
+</script>
+{% endblock %}

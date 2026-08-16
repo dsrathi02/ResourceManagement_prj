@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}Campus Map{% endblock %}
+{% block meta_desc %}Interactive campus map — hover a building to see bookable resources.{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<style>
+/* ── Map container ──────────────────────────────────── */
+#map {
+  height: 600px; width: 100%;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  z-index: 1;
+}
+
+/* ── Permanent building label (matches screenshot) ── */
+.building-label {
+  background: rgba(255,255,255,0.92);
+  border: 1px solid #c8d4e0;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  padding: 3px 8px;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+.building-label::before { content: ''; }
+
+/* ── Resource popup (Leaflet popup override) ─────── */
+.leaflet-popup-content-wrapper {
+  border-radius: 10px !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.14) !important;
+  padding: 0 !important;
+  overflow: hidden;
+  min-width: 230px;
+}
+.leaflet-popup-content { margin: 0 !important; width: auto !important; }
+.leaflet-popup-tip-container { display: none; }
+
+/* ── Popup inner card ────────────────────────────── */
+.rp-card { font-family: 'Inter', sans-serif; }
+
+.rp-header {
+  background: #0d47a1;
+  color: #fff;
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.rp-header-icon { font-size: 1.2rem; }
+.rp-header h3 {
+  margin: 0; font-size: .95rem;
+  font-weight: 800; line-height: 1.2;
+}
+.rp-header-sub {
+  font-size: .7rem; opacity: .8; margin-top: 2px;
+}
+
+.rp-list { list-style: none; margin: 0; padding: 8px 0; }
+.rp-list li {
+  border-bottom: 1px solid #f0f0f0;
+}
+.rp-list li:last-child { border-bottom: none; }
+
+.rp-resource {
+  display: flex; align-items: center;
+  gap: 10px; padding: 10px 16px;
+  text-decoration: none;
+  transition: background .15s;
+  cursor: pointer;
+}
+.rp-resource:hover { background: #eef4ff; }
+.rp-resource:hover .rp-name { color: #0d47a1; }
+
+.rp-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+}
+.rp-dot.available  { background: #16a34a; box-shadow: 0 0 0 2px rgba(22,163,74,.2); }
+.rp-dot.busy       { background: #dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,.2); }
+
+.rp-info { flex: 1; min-width: 0; }
+.rp-name {
+  font-size: .84rem; font-weight: 700; color: #1e293b;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color .15s;
+}
+.rp-cap { font-size: .7rem; color: #64748b; margin-top: 1px; }
+
+.rp-book-btn {
+  font-size: .68rem; font-weight: 700;
+  padding: 4px 10px; border-radius: 20px;
+  background: #1d4ed8; color: #fff;
+  border: none; cursor: pointer; white-space: nowrap;
+  transition: background .15s;
+  text-decoration: none; display: inline-block;
+}
+.rp-book-btn:hover { background: #1e40af; }
+.rp-book-btn.busy {
+  background: #e2e8f0; color: #94a3b8; cursor: not-allowed;
+}
+
+.rp-empty {
+  padding: 14px 16px; color: #94a3b8;
+  font-size: .8rem; text-align: center;
+}
+
+.rp-footer {
+  padding: 10px 16px;
+  border-top: 1px solid #f0f0f0;
+  background: #f8fafc;
+  font-size: .72rem; color: #94a3b8; text-align: center;
+}
+
+/* ── Loading spinner in popup ────────────────────── */
+.rp-loading {
+  padding: 20px; text-align: center; color: #64748b; font-size: .82rem;
+}
+.rp-loading::before {
+  content: ''; display: block; width: 22px; height: 22px;
+  border: 2px solid #e2e8f0; border-top-color: #1d4ed8;
+  border-radius: 50%; animation: spin .7s linear infinite;
+  margin: 0 auto 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Map page hero ───────────────────────────────── */
+.map-page-hero {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  padding: 28px 0 22px;
+}
+.map-page-hero h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+.map-page-hero p  { color: var(--text-2); font-size: .9rem; margin: 0; }
+
+/* ── Legend row ──────────────────────────────────── */
+.map-legend-row {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  align-items: center;
+  font-size: .78rem; color: var(--text-2);
+}
+.ml-dot { width: 10px; height: 10px; border-radius: 50%; display:inline-block; margin-right: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="map-page-hero">
+  <div class="container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div class="hero-eyebrow" style="margin-bottom:8px;">🗺️ Navigation</div>
+      <h1>Campus Map</h1>
+      <p>Hover over any building marker to see its resources. Click <strong>Book</strong> to reserve instantly.</p>
+    </div>
+    <div class="map-legend-row">
+      <span><span class="ml-dot" style="background:#16a34a;"></span>Available</span>
+      <span><span class="ml-dot" style="background:#dc2626;"></span>Unavailable</span>
+    </div>
+  </div>
+</div>
+
+<div class="container" style="padding-top:24px;padding-bottom:48px;">
+  <div id="map"></div>
+  <p style="font-size:.74rem;color:var(--text-3);margin-top:10px;text-align:right;">
+    Map data © <a href="https://www.openstreetmap.org/" target="_blank" style="color:var(--primary);">OpenStreetMap</a> contributors
+  </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+// ── Campus boundary (Cummins College) ──────────────────────────────────────
+const cumminsCoords = [
+  [18.4853467, 73.8164168],
+  [18.4856872, 73.8167004],
+  [18.4857316, 73.8168962],
+  [18.4867995, 73.8166861],
+  [18.4865789, 73.8155602],
+  [18.4860528, 73.8156214],
+  [18.4858168, 73.8158294],
+  [18.4856717, 73.8159865],
+  [18.4855769, 73.816168],
+  [18.4853989, 73.8162985],
+  [18.4853467, 73.8164168],
+];
+
+// ── Initialise map ─────────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: true }).setView([18.48611, 73.8162], 18);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '',
+  maxZoom: 21
+}).addTo(map);
+
+// Campus boundary polygon
+const boundary = L.polygon(cumminsCoords, {
+  color: '#0d47a1',
+  weight: 2.5,
+  fillColor: '#1d4ed8',
+  fillOpacity: 0.06,
+}).addTo(map);
+
+// Fit & soft-restrict to campus
+const bounds = boundary.getBounds();
+map.fitBounds(bounds, { padding: [30, 30] });
+
+// Dark mask outside campus
+const worldMask = [[-90,-180],[-90,180],[90,180],[90,-180],[-90,-180]];
+L.polygon([worldMask, cumminsCoords], {
+  stroke: false,
+  fillColor: '#000',
+  fillOpacity: 0.45
+}).addTo(map);
+
+// ── Helper: build resource popup HTML ─────────────────────────────────────
+function buildPopupHTML(bldName, resources) {
+  const avail  = resources.filter(r => r.status === 'Available').length;
+  const icon   = bldName.toLowerCase().includes('lab')       ? '💻'
+               : bldName.toLowerCase().includes('audit')     ? '🎙️'
+               : bldName.toLowerCase().includes('seminar')   ? '📢'
+               : bldName.toLowerCase().includes('canteen')   ? '🍽️'
+               : bldName.toLowerCase().includes('conf')      ? '🏛️'
+               : bldName.toLowerCase().includes('it ')       ? '🖥️'
+               : '🏢';
+
+  let rows = '';
+  if (resources.length === 0) {
+    rows = `<div class="rp-empty">No resources registered for this building.</div>`;
+  } else {
+    rows = '<ul class="rp-list">';
+    resources.forEach(r => {
+      const isAvailable = r.status === 'Available';
+      const dotClass    = isAvailable ? 'available' : 'busy';
+      const cap         = r.capacity  ? `Capacity: ${r.capacity}` : r.location || '';
+      const btnHTML     = isAvailable
+        ? `<a class="rp-book-btn" href="/booking?resource_id=${r.resource_id}">Book →</a>`
+        : `<span class="rp-book-btn busy">Busy</span>`;
+
+      rows += `
+        <li>
+          <div class="rp-resource">
+            <span class="rp-dot ${dotClass}"></span>
+            <div class="rp-info">
+              <div class="rp-name" title="${r.resource_name}">${r.resource_name}</div>
+              ${cap ? `<div class="rp-cap">${cap}</div>` : ''}
+            </div>
+            ${btnHTML}
+          </div>
+        </li>`;
+    });
+    rows += '</ul>';
+  }
+
+  return `
+    <div class="rp-card">
+      <div class="rp-header">
+        <span class="rp-header-icon">${icon}</span>
+        <div>
+          <h3>${bldName}</h3>
+          <div class="rp-header-sub">${avail} available · ${resources.length} total resource${resources.length !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+      ${rows}
+      <div class="rp-footer">Click "Book →" on an available resource to reserve it</div>
+    </div>`;
+}
+
+// ── Load buildings + place markers ─────────────────────────────────────────
+fetch('/get-building-resources')
+  .then(r => r.json())
+  .then(buildings => {
+    buildings.forEach(bld => {
+      const [lat, lng] = bld.coord;
+
+      // --- Custom marker icon (matches the blue Leaflet default lookalike) ---
+      const markerIcon = L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41], iconAnchor: [12, 41],
+        popupAnchor: [0, -38], shadowSize: [41, 41]
+      });
+
+      const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(map);
+
+      // ── Permanent building name label (same as screenshot) ──────────────
+      marker.bindTooltip(bld.name, {
+        permanent: true,
+        direction: 'right',
+        className: 'building-label',
+        offset: [10, -20]
+      });
+
+      // ── Resource popup (click) ──────────────────────────────────────────
+      const popup = L.popup({
+        maxWidth: 300,
+        minWidth: 240,
+        closeButton: true,
+        autoClose: true,
+        className: 'resource-popup'
+      });
+
+      // Bind click → open popup with resource list
+      marker.on('click', function () {
+        // Show loading state first
+        popup.setContent(`<div class="rp-card"><div class="rp-loading">Loading resources…</div></div>`);
+        marker.bindPopup(popup).openPopup();
+
+        // Build the actual content from pre-loaded data
+        setTimeout(() => {
+          popup.setContent(buildPopupHTML(bld.name, bld.resources));
+        }, 150); // tiny delay so the popup renders before we swap content
+      });
+
+      // ── Hover → open popup temporarily ─────────────────────────────────
+      let hoverTimer = null;
+
+      marker.on('mouseover', function () {
+        hoverTimer = setTimeout(() => {
+          popup.setContent(buildPopupHTML(bld.name, bld.resources));
+          marker.bindPopup(popup).openPopup();
+        }, 200); // slight delay so quick mouse passes don't trigger
+      });
+
+      marker.on('mouseout', function () {
+        clearTimeout(hoverTimer);
+        // Don't close on mouseout — let user interact with popup
+      });
+    });
+  })
+  .catch(err => console.error('Failed to load building resources:', err));
+</script>
+{% endblock %}

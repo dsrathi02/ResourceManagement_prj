@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign Up — Reserva</title>
+  <meta name="description" content="Create a Reserva account to start booking campus resources."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body style="padding-top:0;">
+
+<div class="auth-page">
+  <!-- ── Left: Hero ─────────────────────────────────────── -->
+  <div class="auth-hero">
+    <div class="auth-hero-content">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        Reserva
+      </div>
+      <h1>Join Reserva<br/>Today</h1>
+      <p>Create your campus account in seconds and get instant access to booking labs, halls, and projectors.</p>
+      <div class="auth-features">
+        <div class="auth-feature"><div class="auth-feature-icon">🚀</div>Instant resource booking</div>
+        <div class="auth-feature"><div class="auth-feature-icon">🔔</div>Real-time availability</div>
+        <div class="auth-feature"><div class="auth-feature-icon">📊</div>Booking history &amp; status</div>
+        <div class="auth-feature"><div class="auth-feature-icon">🛡️</div>Approval-based workflow</div>
+      </div>
+      <div style="margin-top:40px;color:rgba(255,255,255,.7);font-size:.875rem;">
+        Already registered? <a href="/login" style="color:#fff;font-weight:700;">Sign in →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Right: Form ────────────────────────────────────── -->
+  <div class="auth-form-side">
+    <div class="auth-form-box">
+      <div style="margin-bottom:28px;">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>
+            <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
+        </div>
+        <h2>Create Account</h2>
+        <p class="auth-sub">Fill in your details to get started</p>
+      </div>
+
+      {% if error %}
+      <div class="auth-error">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST" id="signupForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="first_name">First Name</label>
+            <div class="input-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <input type="text" id="first_name" name="first_name" class="form-input has-icon" placeholder="First" required/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="last_name">Last Name</label>
+            <div class="input-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <input type="text" id="last_name" name="last_name" class="form-input has-icon" placeholder="Last" required/>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="department">Department</label>
+          <div class="input-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            <input type="text" id="department" name="department" class="form-input has-icon" placeholder="e.g. Computer Engineering"/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          <div class="input-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <input type="email" id="email" name="email" class="form-input has-icon" placeholder="your@college.edu" required autocomplete="email"/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="password" name="password" class="form-input has-icon" placeholder="Min 8 chars, A-Z, 0-9, special" required minlength="8"/>
+          </div>
+          <!-- password strength rules -->
+          <div id="pwRules" style="display:none;margin-top:8px;padding:10px 14px;border-radius:10px;background:var(--surface-2,#f1f5f9);border:1px solid var(--border,#e2e8f0);font-size:.8rem;line-height:1.7;">
+            <div id="r-len"  class="pw-rule">✗ At least 8 characters</div>
+            <div id="r-upper" class="pw-rule">✗ At least 1 uppercase letter (A–Z)</div>
+            <div id="r-num"  class="pw-rule">✗ At least 1 number (0–9)</div>
+            <div id="r-spec" class="pw-rule">✗ At least 1 special character (!@#$…)</div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:24px;">
+          <label class="form-label" for="role">Role</label>
+          <div class="input-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <select id="role" name="role" class="form-select has-icon">
+              <option value="Student">Student</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-auth" id="signupBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Create Account
+        </button>
+      </form>
+
+      <div class="auth-switch">
+        Already have an account? <a href="/login" class="auth-link">Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="themeToggle" aria-label="Toggle theme"
+  style="position:fixed;top:16px;right:16px;z-index:999;width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-2);">
+  <svg class="sun-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  <svg class="moon-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+</button>
+
+<style>
+.pw-rule { color: var(--text-2, #64748b); transition: color .2s; }
+.pw-rule.ok { color: #22c55e; }
+</style>
+<script>
+const html = document.documentElement;
+html.setAttribute('data-theme', localStorage.getItem('reserva-theme') || 'light');
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('reserva-theme', next);
+});
+
+// ── Password strength checker ──────────────────────────────────────
+const pwInput  = document.getElementById('password');
+const pwRules  = document.getElementById('pwRules');
+const rLen     = document.getElementById('r-len');
+const rUpper   = document.getElementById('r-upper');
+const rNum     = document.getElementById('r-num');
+const rSpec    = document.getElementById('r-spec');
+
+function checkPw(v) {
+  const ok = {
+    len:   v.length >= 8,
+    upper: /[A-Z]/.test(v),
+    num:   /[0-9]/.test(v),
+    spec:  /[^A-Za-z0-9]/.test(v),
+  };
+  rLen.textContent   = (ok.len   ? '✓' : '✗') + ' At least 8 characters';
+  rUpper.textContent = (ok.upper ? '✓' : '✗') + ' At least 1 uppercase letter (A–Z)';
+  rNum.textContent   = (ok.num   ? '✓' : '✗') + ' At least 1 number (0–9)';
+  rSpec.textContent  = (ok.spec  ? '✓' : '✗') + ' At least 1 special character (!@#$…)';
+  rLen.className     = 'pw-rule' + (ok.len   ? ' ok' : '');
+  rUpper.className   = 'pw-rule' + (ok.upper ? ' ok' : '');
+  rNum.className     = 'pw-rule' + (ok.num   ? ' ok' : '');
+  rSpec.className    = 'pw-rule' + (ok.spec  ? ' ok' : '');
+  return ok.len && ok.upper && ok.num && ok.spec;
+}
+
+pwInput.addEventListener('focus', () => { pwRules.style.display = 'block'; });
+pwInput.addEventListener('blur',  () => { if (!pwInput.value) pwRules.style.display = 'none'; });
+pwInput.addEventListener('input', () => { checkPw(pwInput.value); });
+
+document.getElementById('signupForm').addEventListener('submit', (e) => {
+  const v = pwInput.value;
+  pwRules.style.display = 'block';
+  if (!checkPw(v)) {
+    e.preventDefault();
+    // Shake the rules box
+    pwRules.style.animation = 'none';
+    pwRules.offsetHeight; // reflow
+    pwRules.style.animation = 'pwShake .4s ease';
+    pwInput.focus();
+    return;
+  }
+  const btn = document.getElementById('signupBtn');
+  btn.innerHTML = '<svg class="spin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Creating…';
+  btn.disabled = true;
+});
+</script>
+<style>
+@keyframes pwShake {
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 60%{transform:translateX(6px)}
+}
+</style>
+</body>
+</html>

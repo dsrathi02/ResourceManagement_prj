@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ResourceHub — Campus Booking System</title>
+  <meta name="description" content="Book labs, conference rooms, projectors and more. Campus resource management made simple."/>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+
+<!-- ═══ Toast Stack ═══════════════════════════════════════════ -->
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- ═══ Booking Modal ══════════════════════════════════════════ -->
+<div class="overlay" id="bookingOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Book a Resource">
+
+    <div class="modal-head">
+      <h3 id="modalTitle">Book a Resource</h3>
+      <button class="btn-close" id="modalCloseBtn" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Resource preview chip -->
+    <div class="modal-resource-chip">
+      <div class="chip-icon" id="chipIcon">📦</div>
+      <div>
+        <div class="chip-name" id="chipName">—</div>
+        <div class="chip-loc"  id="chipLoc">—</div>
+      </div>
+    </div>
+
+    <!-- Alert -->
+    <div class="alert" id="modalAlert"></div>
+
+    <form id="bookingForm" novalidate>
+      <input type="hidden" id="hiddenResourceId"/>
+
+      <!-- User selector -->
+      <div class="form-group">
+        <label class="form-label" for="selectUser">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Booking For (User)
+        </label>
+        <div class="input-field">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <select id="selectUser" required>
+            <option value="" disabled selected>Select a user…</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Start datetime -->
+      <div class="form-group">
+        <label class="form-label" for="startDt">Start Date &amp; Time</label>
+        <div class="input-field">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input type="datetime-local" id="startDt" required/>
+        </div>
+      </div>
+
+      <!-- End datetime -->
+      <div class="form-group">
+        <label class="form-label" for="endDt">End Date &amp; Time</label>
+        <div class="input-field">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <input type="datetime-local" id="endDt" required/>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel-modal" id="modalCancelBtn">Cancel</button>
+        <button type="submit" class="btn-confirm" id="confirmBtn">
+          <div class="spin"></div>
+          <span class="btn-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Confirm Booking
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══ App Shell ══════════════════════════════════════════════ -->
+<div class="app-shell">
+
+  <!-- Icon Rail -->
+  <nav class="icon-rail" aria-label="Icon navigation">
+    <div class="rail-logo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+    </div>
+
+    <button class="rail-btn active" data-section="resources" title="Resources" id="railResources">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+    </button>
+
+    <button class="rail-btn" data-section="bookings" title="All Bookings" id="railBookings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+    </button>
+
+    <div class="rail-spacer"></div>
+
+    <!-- DB status indicator -->
+    <div style="display:flex;align-items:center;justify-content:center;margin-bottom:8px;" title="DB Connected">
+      <div style="width:10px;height:10px;border-radius:50%;background:var(--success);animation:pulse 2s infinite;"></div>
+    </div>
+  </nav>
+
+  <!-- Label Sidebar -->
+  <aside class="sidebar-labels" aria-label="Sidebar navigation">
+    <div class="sidebar-brand">
+      <div class="brand-name">ResourceHub</div>
+      <div class="brand-tagline">Campus Booking System</div>
+    </div>
+
+    <div class="side-section-label">Navigation</div>
+
+    <button class="side-nav-item active" data-section="resources" id="sideResources">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+      Browse Resources
+    </button>
+
+    <button class="side-nav-item" data-section="bookings" id="sideBookings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+      All Bookings
+    </button>
+
+    <div class="sidebar-spacer"></div>
+
+    <div class="sidebar-info">
+      <div><span class="sidebar-info-dot"></span><span class="sidebar-info-title">System Live</span></div>
+      <div class="sidebar-info-sub">mini_project · MySQL 8</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <div class="topbar-breadcrumb">
+        <span class="bc-page" id="topTitle">Resources</span>
+        <span class="bc-sep">›</span>
+        <span class="bc-sub" id="topSub">All available resources</span>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="topbar-badge">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse 2s infinite;display:block;"></span>
+        Live
+      </div>
+    </header>
+
+    <!-- Scrollable page body -->
+    <div class="page-body">
+
+      <!-- ───────────────────────────────────────────── -->
+      <!--  SECTION: Resources                           -->
+      <!-- ───────────────────────────────────────────── -->
+      <section class="section active" id="sectionResources">
+
+        <!-- KPI strip -->
+        <div class="kpi-strip">
+          <div class="kpi-card blue">
+            <div class="kpi-icon blue">🏛️</div>
+            <div class="kpi-num" id="kpiTotal">—</div>
+            <div class="kpi-label">Total Resources</div>
+          </div>
+          <div class="kpi-card green">
+            <div class="kpi-icon green">✅</div>
+            <div class="kpi-num" id="kpiAvail">—</div>
+            <div class="kpi-label">Available</div>
+          </div>
+          <div class="kpi-card amber">
+            <div class="kpi-icon amber">📅</div>
+            <div class="kpi-num" id="kpiBookings">—</div>
+            <div class="kpi-label">Total Bookings</div>
+          </div>
+          <div class="kpi-card cyan">
+            <div class="kpi-icon cyan">👥</div>
+            <div class="kpi-num" id="kpiUsers">—</div>
+            <div class="kpi-label">Registered Users</div>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="sec-header">
+          <div class="sec-header-left">
+            <h2>Available Resources</h2>
+            <p>Click <strong>Book Now</strong> on any resource to create a reservation</p>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-input-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="searchInput" placeholder="Search by name or location…" autocomplete="off"/>
+          </div>
+          <button class="filter-chip active" data-filter="all"       id="chipAll">All</button>
+          <button class="filter-chip"        data-filter="available" id="chipAvail">Available</button>
+          <button class="filter-chip"        data-filter="lab">Labs</button>
+          <button class="filter-chip"        data-filter="conference">Conference</button>
+          <button class="filter-chip"        data-filter="projector">Projectors</button>
+        </div>
+
+        <!-- Resource grid -->
+        <div class="resource-grid" id="resourceGrid">
+          <!-- skeleton placeholders -->
+          <div class="skel" style="height:230px;"></div>
+          <div class="skel" style="height:230px;"></div>
+          <div class="skel" style="height:230px;"></div>
+          <div class="skel" style="height:230px;"></div>
+        </div>
+
+      </section>
+
+      <!-- ───────────────────────────────────────────── -->
+      <!--  SECTION: All Bookings                        -->
+      <!-- ───────────────────────────────────────────── -->
+      <section class="section" id="sectionBookings">
+
+        <div class="sec-header">
+          <div class="sec-header-left">
+            <h2>All Bookings</h2>
+            <p>Complete log of every resource reservation</p>
+          </div>
+          <button class="btn btn-outline btn-sm" id="refreshBookingsBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+
+        <div class="table-shell">
+          <table class="data-table" id="bookingsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Department</th>
+                <th>Resource</th>
+                <th>Location</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsTbody">
+              <tr>
+                <td colspan="9">
+                  <div class="empty">
+                    <div class="empty-emoji">⏳</div>
+                    <h4>Loading bookings…</h4>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+
+    </div><!-- /.page-body -->
+  </div><!-- /.main -->
+</div><!-- /.app-shell -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+/* ────────────────────────────────────────────
+   State
+──────────────────────────────────────────── */
+let resources   = [];
+let users       = [];
+let activeFilter = 'all';
+let searchQuery  = '';
+
+/* ────────────────────────────────────────────
+   Toast
+──────────────────────────────────────────── */
+function toast(msg, type = 'success') {
+  const stack = document.getElementById('toastStack');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `
+    <span class="t-dot"></span>
+    <span class="t-msg">${msg}</span>
+    <button class="t-close" onclick="this.parentElement.remove()">×</button>`;
+  stack.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity .3s, transform .3s';
+    el.style.opacity = '0'; el.style.transform = 'translateX(50px)';
+    setTimeout(() => el.remove(), 300);
+  }, 3500);
+}
+
+/* ────────────────────────────────────────────
+   Alert inside modal
+──────────────────────────────────────────── */
+function showAlert(msg, type) {
+  const el = document.getElementById('modalAlert');
+  el.textContent = msg;
+  el.className = `alert show ${type}`;
+}
+function clearAlert() {
+  document.getElementById('modalAlert').className = 'alert';
+}
+
+/* ────────────────────────────────────────────
+   Resource icons
+──────────────────────────────────────────── */
+function resourceIcon(name = '') {
+  const n = name.toLowerCase();
+  if (n.includes('computer') || n.includes('lab'))  return { emoji: '💻', cls: 'blue' };
+  if (n.includes('conference'))                      return { emoji: '🏛️',  cls: 'blue' };
+  if (n.includes('seminar'))                         return { emoji: '🎙️', cls: 'amber' };
+  if (n.includes('projector'))                       return { emoji: '📽️',  cls: 'amber' };
+  return { emoji: '📦', cls: 'green' };
+}
+
+/* ────────────────────────────────────────────
+   Load resources
+──────────────────────────────────────────── */
+async function loadResources() {
+  try {
+    const r = await fetch('/resources');
+    resources = await r.json();
+    document.getElementById('kpiTotal').textContent = resources.length;
+    document.getElementById('kpiAvail').textContent = resources.filter(r => r.status === 'Available').length;
+    renderResources();
+  } catch {
+    document.getElementById('resourceGrid').innerHTML =
+      `<div style="grid-column:1/-1;"><div class="empty"><div class="empty-emoji">⚠️</div><h4>Could not load resources</h4><p>Ensure MySQL is running and credentials are correct.</p></div></div>`;
+  }
+}
+
+/* ────────────────────────────────────────────
+   Render resource grid
+──────────────────────────────────────────── */
+function renderResources() {
+  const grid = document.getElementById('resourceGrid');
+
+  let list = resources;
+
+  // filter by chip
+  if (activeFilter !== 'all') {
+    if (activeFilter === 'available') {
+      list = list.filter(r => r.status === 'Available');
+    } else {
+      list = list.filter(r => r.resource_name.toLowerCase().includes(activeFilter));
+    }
+  }
+
+  // filter by search
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    list = list.filter(r =>
+      r.resource_name.toLowerCase().includes(q) ||
+      r.location.toLowerCase().includes(q));
+  }
+
+  if (!list.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;"><div class="empty"><div class="empty-emoji">🔍</div><h4>No resources found</h4><p>Try adjusting your search or filter.</p></div></div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(r => {
+    const ic   = resourceIcon(r.resource_name);
+    const avail = r.status === 'Available';
+    const safeR = JSON.stringify(r).replace(/"/g, '&quot;');
+    return `
+    <article class="resource-card" style="animation-delay:${list.indexOf(r) * 40}ms">
+      <div class="rc-top">
+        <div class="rc-icon ${ic.cls}">${ic.emoji}</div>
+        <span class="rc-badge ${avail ? 'avail' : 'unavail'}">${r.status}</span>
+      </div>
+      <div>
+        <div class="rc-name">${r.resource_name}</div>
+      </div>
+      <div class="rc-meta">
+        <div class="rc-meta-row">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          ${r.location}
+        </div>
+        <div class="rc-meta-row">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Capacity: ${r.capacity ?? '—'}
+        </div>
+        ${r.incharge_name ? `<div class="rc-meta-row">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          ${r.incharge_name}
+        </div>` : ''}
+      </div>
+      <button class="btn-book" onclick='openModal(${safeR})' ${!avail ? 'disabled' : ''}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        ${avail ? 'Book Now' : 'Unavailable'}
+      </button>
+    </article>`;
+  }).join('');
+}
+
+/* ────────────────────────────────────────────
+   Filter chips
+──────────────────────────────────────────── */
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFilter = chip.dataset.filter || chip.textContent.trim().toLowerCase();
+    renderResources();
+  });
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQuery = e.target.value.trim();
+  renderResources();
+});
+
+/* ────────────────────────────────────────────
+   Load users (for booking dropdown)
+──────────────────────────────────────────── */
+async function loadUsers() {
+  try {
+    const r = await fetch('/users');
+    users = await r.json();
+    document.getElementById('kpiUsers').textContent = users.length;
+    const sel = document.getElementById('selectUser');
+    sel.innerHTML = `<option value="" disabled selected>Select a user…</option>` +
+      users.map(u => `<option value="${u.user_id}">${u.first_name} ${u.last_name} (${u.role} · ${u.department})</option>`).join('');
+  } catch { /* silently fail */ }
+}
+
+/* ────────────────────────────────────────────
+   Modal open / close
+──────────────────────────────────────────── */
+function openModal(resource) {
+  document.getElementById('hiddenResourceId').value = resource.resource_id;
+  const ic = resourceIcon(resource.resource_name);
+  document.getElementById('chipIcon').textContent = ic.emoji;
+  document.getElementById('chipName').textContent = resource.resource_name;
+  document.getElementById('chipLoc').textContent  = resource.location;
+  document.getElementById('selectUser').value     = '';
+  clearAlert();
+
+  // set min datetime to now (rounded up to next 15 min)
+  const now = new Date();
+  now.setSeconds(0); now.setMilliseconds(0);
+  now.setMinutes(now.getMinutes() + (15 - now.getMinutes() % 15));
+  const localISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  document.getElementById('startDt').min = localISO;
+  document.getElementById('startDt').value = localISO;
+  const endDef = new Date(now.getTime() + 3600000);
+  document.getElementById('endDt').min   = localISO;
+  document.getElementById('endDt').value = new Date(endDef.getTime() - endDef.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+  document.getElementById('confirmBtn').classList.remove('loading');
+  document.getElementById('bookingOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('bookingOverlay').classList.remove('open');
+}
+
+document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+document.getElementById('bookingOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('bookingOverlay')) closeModal();
+});
+
+/* ────────────────────────────────────────────
+   Booking form submit
+──────────────────────────────────────────── */
+document.getElementById('bookingForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  clearAlert();
+
+  const resource_id = document.getElementById('hiddenResourceId').value;
+  const user_id     = document.getElementById('selectUser').value;
+  const start_time  = document.getElementById('startDt').value;
+  const end_time    = document.getElementById('endDt').value;
+
+  if (!user_id)  { showAlert('Please select a user.', 'error'); return; }
+  if (!start_time || !end_time) { showAlert('Please set start and end times.', 'error'); return; }
+  if (start_time >= end_time)   { showAlert('End time must be after start time.', 'error'); return; }
+
+  const btn = document.getElementById('confirmBtn');
+  btn.classList.add('loading');
+
+  try {
+    const res  = await fetch('/create-booking', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ user_id, resource_id, start_time, end_time })
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      closeModal();
+      toast(`🎉 ${data.message}! Booking #${data.booking_id} confirmed.`);
+      loadKPIBookings();
+    } else {
+      showAlert(data.message || 'Booking failed.', 'error');
+      btn.classList.remove('loading');
+    }
+  } catch {
+    showAlert('Server error — check the backend.', 'error');
+    btn.classList.remove('loading');
+  }
+});
+
+/* ────────────────────────────────────────────
+   Load bookings table
+──────────────────────────────────────────── */
+async function loadBookings() {
+  const tbody = document.getElementById('bookingsTbody');
+  tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-emoji">⏳</div><h4>Loading…</h4></div></td></tr>`;
+
+  try {
+    const r    = await fetch('/bookings');
+    const data = await r.json();
+
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-emoji">📋</div><h4>No bookings yet</h4><p>Head over to Resources to make a booking.</p></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map(b => {
+      const pill   = `<span class="pill ${b.booking_status}">${cap(b.booking_status)}</span>`;
+      const action = b.booking_status !== 'cancelled'
+        ? `<button class="btn-xs danger" id="cancel-${b.booking_id}" onclick="cancelBooking(${b.booking_id})">Cancel</button>`
+        : `<span style="color:var(--t3);font-size:.75rem;">—</span>`;
+      return `<tr>
+        <td style="color:var(--t3);font-weight:600;">#${b.booking_id}</td>
+        <td><strong>${b.user_name}</strong></td>
+        <td style="color:var(--t2);">${b.department}</td>
+        <td>${b.resource_name}</td>
+        <td style="color:var(--t2);">${b.location}</td>
+        <td style="font-variant-numeric:tabular-nums;">${fmtDT(b.start_datetime)}</td>
+        <td style="font-variant-numeric:tabular-nums;">${fmtDT(b.end_datetime)}</td>
+        <td>${pill}</td>
+        <td>${action}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('kpiBookings').textContent = data.length;
+  } catch {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-emoji">⚠️</div><h4>Failed to load bookings</h4></div></td></tr>`;
+  }
+}
+
+async function loadKPIBookings() {
+  try {
+    const r = await fetch('/bookings');
+    const d = await r.json();
+    document.getElementById('kpiBookings').textContent = d.length;
+  } catch { /* noop */ }
+}
+
+async function cancelBooking(id) {
+  if (!confirm(`Cancel booking #${id}?`)) return;
+  try {
+    const res  = await fetch(`/cancel-booking/${id}`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) { toast(`Booking #${id} cancelled.`, 'error'); loadBookings(); }
+    else        { toast(data.message || 'Failed to cancel.', 'error'); }
+  } catch { toast('Server error.', 'error'); }
+}
+
+/* ────────────────────────────────────────────
+   Navigation
+──────────────────────────────────────────── */
+const ALL_NAV = [
+  ...document.querySelectorAll('.rail-btn[data-section]'),
+  ...document.querySelectorAll('.side-nav-item[data-section]')
+];
+const SECTIONS = { resources: 'sectionResources', bookings: 'sectionBookings' };
+const TOPBAR   = {
+  resources: ['Resources', 'All available resources'],
+  bookings:  ['All Bookings', 'Complete reservation log'],
+};
+
+function switchSection(target) {
+  ALL_NAV.forEach(n => n.classList.toggle('active', n.dataset.section === target));
+  Object.entries(SECTIONS).forEach(([k, v]) => {
+    document.getElementById(v).classList.toggle('active', k === target);
+  });
+  document.getElementById('topTitle').textContent = TOPBAR[target][0];
+  document.getElementById('topSub').textContent   = TOPBAR[target][1];
+
+  if (target === 'bookings') loadBookings();
+}
+
+ALL_NAV.forEach(btn => {
+  btn.addEventListener('click', () => switchSection(btn.dataset.section));
+});
+
+document.getElementById('refreshBookingsBtn').addEventListener('click', loadBookings);
+
+/* ────────────────────────────────────────────
+   Helpers
+──────────────────────────────────────────── */
+function cap(s) { return s ? s[0].toUpperCase() + s.slice(1) : ''; }
+
+function fmtDT(str) {
+  if (!str) return '—';
+  const d = new Date(str);
+  return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+/* ────────────────────────────────────────────
+   Init
+──────────────────────────────────────────── */
+(async () => {
+  await Promise.all([loadResources(), loadUsers(), loadKPIBookings()]);
+})();
+</script>
+</body>
+</html>

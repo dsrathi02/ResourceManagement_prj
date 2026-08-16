@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Resources{% endblock %}
+{% block meta_desc %}Browse all campus resources — labs, seminar halls, conference rooms, and projectors.{% endblock %}
+
+{% block content %}
+<div class="page-hero hero-teal">
+  <div class="container">
+    <div class="hero-eyebrow">🖥️ Infrastructure</div>
+    <h1>Campus Resources</h1>
+    <p>Book labs, conference rooms, seminar halls, and projectors for your events and classes.</p>
+    <div class="hero-row">
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-num" id="hTotal">{{ resources | length }}</div><div class="hero-stat-lbl">Total Resources</div></div>
+        <div class="hero-stat"><div class="hero-stat-num" id="hAvail">{{ resources | selectattr('status','equalto','Available') | list | length }}</div><div class="hero-stat-lbl">Available Now</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <section class="section">
+
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="resSearch" placeholder="Search by name or location…" autocomplete="off"/>
+      </div>
+      <button class="chip active" data-filter="all">All</button>
+      <button class="chip" data-filter="available">Available</button>
+      <button class="chip" data-filter="lab">Labs</button>
+      <button class="chip" data-filter="conference">Conference</button>
+      <button class="chip" data-filter="seminar">Seminar</button>
+      <button class="chip" data-filter="projector">Projectors</button>
+    </div>
+
+    <div class="resources-grid" id="resourceGrid">
+      {% for r in resources %}
+      {% set icon = '💻' if 'lab' in r.resource_name.lower() or 'computer' in r.resource_name.lower()
+                    else '🏛️' if 'conference' in r.resource_name.lower()
+                    else '🎙️' if 'seminar' in r.resource_name.lower()
+                    else '📽️' if 'projector' in r.resource_name.lower()
+                    else '📦' %}
+      {% set ic_cls = 'lab' if 'lab' in r.resource_name.lower() or 'computer' in r.resource_name.lower()
+                      else 'conf' if 'conference' in r.resource_name.lower()
+                      else 'seminar' if 'seminar' in r.resource_name.lower()
+                      else 'proj' if 'projector' in r.resource_name.lower()
+                      else 'default' %}
+      {% set avail = r.status == 'Available' %}
+      <article class="resource-card animate-in" style="animation-delay:{{ loop.index0 * 0.05 }}s"
+               data-name="{{ r.resource_name | lower }}"
+               data-loc="{{ r.location | lower }}"
+               data-status="{{ r.status | lower }}">
+        <div class="rc-top">
+          <div class="rc-icon {{ ic_cls }}">{{ icon }}</div>
+          <span class="pill {{ 'pill-available' if avail else 'pill-cancelled' }}">
+            {% if avail %}<span style="width:5px;height:5px;border-radius:50%;background:var(--success);animation:pulse 1.8s infinite;"></span>{% endif %}
+            {{ r.status }}
+          </span>
+        </div>
+        <div class="rc-name">{{ r.resource_name }}</div>
+        <div class="rc-meta">
+          <div class="rc-row">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            {{ r.location }}
+          </div>
+          {% if r.capacity %}
+          <div class="rc-row">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Capacity: {{ r.capacity }}
+          </div>
+          {% endif %}
+          {% if r.incharge_name %}
+          <div class="rc-row">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            {{ r.incharge_name }}
+          </div>
+          {% endif %}
+        </div>
+        {% if avail %}
+        <a href="/booking?resource_id={{ r.resource_id }}" class="btn-book">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+          Book Now
+        </a>
+        {% else %}
+        <button class="btn-book" disabled>Unavailable</button>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+
+    <div id="noRes" class="empty-state" style="display:none;">
+      <div class="empty-state-icon">🔍</div>
+      <h3>No resources found</h3>
+      <p>Try adjusting your search or filter.</p>
+    </div>
+
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const cards   = document.querySelectorAll('.resource-card');
+const noRes   = document.getElementById('noRes');
+const search  = document.getElementById('resSearch');
+let activeFilter = 'all';
+
+function filterResources() {
+  const q = search.value.toLowerCase();
+  let visible = 0;
+  cards.forEach(c => {
+    const name   = c.dataset.name   || '';
+    const loc    = c.dataset.loc    || '';
+    const status = c.dataset.status || '';
+    const matchQ = !q || name.includes(q) || loc.includes(q);
+    const matchF = activeFilter === 'all'      ? true
+                 : activeFilter === 'available' ? status === 'available'
+                 : name.includes(activeFilter);
+    const show = matchQ && matchF;
+    c.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  noRes.style.display = visible ? 'none' : 'block';
+}
+
+search.addEventListener('input', filterResources);
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFilter = chip.dataset.filter;
+    filterResources();
+  });
+});
+</script>
+{% endblock %}

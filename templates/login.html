@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — Reserva</title>
+  <meta name="description" content="Sign in to Reserva — your campus resource booking system."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body style="padding-top:0;">
+
+<div class="auth-page">
+
+  <!-- ── Left: Hero ─────────────────────────────────────── -->
+  <div class="auth-hero">
+    <div class="auth-hero-content">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        Reserva
+      </div>
+
+      <h1>Your Campus<br/>Resource Hub</h1>
+      <p>Book labs, seminar halls, and projectors — all from one unified platform built for your campus.</p>
+
+      <div class="auth-features">
+        <div class="auth-feature"><div class="auth-feature-icon">🖥️</div>Book rooms &amp; labs instantly</div>
+        <div class="auth-feature"><div class="auth-feature-icon">📅</div>Track all campus events</div>
+        <div class="auth-feature"><div class="auth-feature-icon">🗺️</div>Interactive campus map</div>
+        <div class="auth-feature"><div class="auth-feature-icon">📋</div>Manage your reservations</div>
+      </div>
+
+      <div class="auth-demo">
+        <div class="auth-demo-title">🔑 Demo Credentials</div>
+        <div class="auth-demo-row"><span>amit@gmail.com / Student@1</span><span class="auth-demo-role">Student</span></div>
+        <div class="auth-demo-row"><span>admin@gmail.com / Admin@1234</span><span class="auth-demo-role">Admin</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Right: Form ────────────────────────────────────── -->
+  <div class="auth-form-side">
+    <div class="auth-form-box">
+      <div style="margin-bottom:32px;">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <h2>Welcome back</h2>
+        <p class="auth-sub">Sign in to access your campus resources</p>
+      </div>
+
+      {% if error %}
+      <div class="auth-error">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST" id="loginForm">
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          <div class="input-wrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <input type="email" id="email" name="email" class="form-input has-icon" placeholder="your@email.com" required autocomplete="email"/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-wrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="password" name="password" class="form-input has-icon" placeholder="Enter your password" required autocomplete="current-password"/>
+          </div>
+        </div>
+
+        <div style="text-align:right;margin-top:-8px;margin-bottom:20px;">
+          <a href="/forgot-password" id="forgotPasswordLink"
+             style="font-size:.82rem;color:var(--primary,#6366f1);text-decoration:none;font-weight:500;opacity:.9;transition:opacity .2s;"
+             onmouseover="this.style.opacity='1';this.style.textDecoration='underline';"
+             onmouseout="this.style.opacity='.9';this.style.textDecoration='none';">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn-auth" id="loginBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          Sign In
+        </button>
+      </form>
+
+      <div class="auth-switch">
+        Don't have an account? <a href="/signup" class="auth-link">Create one</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Theme toggle (top-right corner) -->
+<button id="themeToggle" aria-label="Toggle theme"
+  style="position:fixed;top:16px;right:16px;z-index:999;width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-2);">
+  <svg class="sun-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  <svg class="moon-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+</button>
+
+<script>
+const html = document.documentElement;
+const saved = localStorage.getItem('reserva-theme') || 'light';
+html.setAttribute('data-theme', saved);
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('reserva-theme', next);
+});
+document.getElementById('loginForm').addEventListener('submit', () => {
+  const btn = document.getElementById('loginBtn');
+  btn.innerHTML = '<svg class="spin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Signing in…';
+  btn.disabled = true;
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,760 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel{% endblock %}
+{% block meta_desc %}Reserva Admin Panel — manage bookings, events, and campus resources.{% endblock %}
+
+{% block content %}
+<!-- ── Hero ── -->
+<div class="page-hero hero-danger">
+  <div class="container">
+    <div class="hero-eyebrow" style="background:var(--danger-muted);color:var(--danger);border-color:rgba(220,38,38,.3);">🛡️ Administration</div>
+    <h1>Admin Panel</h1>
+    <p>Approve booking requests, publish events, and manage campus resources.</p>
+    <div class="hero-row">
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-num">{{ total_bookings }}</div><div class="hero-stat-lbl">Total Bookings</div></div>
+        <div class="hero-stat"><div class="hero-stat-num" style="color:var(--warning)">{{ pending_count }}</div><div class="hero-stat-lbl">Awaiting Approval</div></div>
+        <div class="hero-stat"><div class="hero-stat-num">{{ all_events | length }}</div><div class="hero-stat-lbl">Events</div></div>
+        <div class="hero-stat"><div class="hero-stat-num">{{ user_count }}</div><div class="hero-stat-lbl">Users</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <section class="section">
+
+    <!-- ── Pending alert banner ── -->
+    {% if pending_count > 0 %}
+    <div style="background:var(--warning-muted);border:1px solid rgba(217,119,6,.3);border-left:4px solid var(--warning);border-radius:var(--r-lg);padding:16px 20px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.4rem;">⏳</span>
+        <div>
+          <div style="font-weight:700;color:var(--warning);font-size:.95rem;">{{ pending_count }} booking request(s) need your approval</div>
+          <div style="font-size:.8rem;color:var(--text-2);margin-top:2px;">Review and approve or reject below under the Bookings tab.</div>
+        </div>
+      </div>
+      <button onclick="switchTab('bookings')" class="btn btn-secondary btn-sm">Review Now →</button>
+    </div>
+    {% endif %}
+
+    <!-- ── Tab Navigation ── -->
+    <div class="admin-tabs" id="adminTabs" role="tablist">
+      <button class="admin-tab active" data-tab="bookings" role="tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+        Bookings
+        {% if pending_count > 0 %}<span class="tab-badge">{{ pending_count }}</span>{% endif %}
+      </button>
+      <button class="admin-tab" data-tab="events" role="tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Events
+      </button>
+      <button class="admin-tab" data-tab="resources" role="tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
+        Resources
+      </button>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         TAB: BOOKINGS
+         ════════════════════════════════════════ -->
+    <div class="tab-content active" id="tab-bookings" role="tabpanel">
+
+      <!-- Quick stats -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;">
+        <div class="stat-card amber">
+          <div class="stat-icon amber">⏳</div>
+          <div class="stat-value">{{ pending_count }}</div>
+          <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon success">✅</div>
+          <div class="stat-value">{{ confirmed_count }}</div>
+          <div class="stat-label">Confirmed</div>
+        </div>
+        <div class="stat-card indigo">
+          <div class="stat-icon indigo">📋</div>
+          <div class="stat-value">{{ total_bookings }}</div>
+          <div class="stat-label">Total</div>
+        </div>
+      </div>
+
+      <!-- Filter chips (client-side) -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="chip active" onclick="filterBookings('all', this)">All</button>
+        <button class="chip"        onclick="filterBookings('pending', this)">⏳ Pending</button>
+        <button class="chip"        onclick="filterBookings('confirmed', this)">✅ Confirmed</button>
+        <button class="chip"        onclick="filterBookings('cancelled', this)">❌ Cancelled</button>
+      </div>
+
+      {% if all_bookings %}
+      <div class="table-wrapper">
+        <table class="data-table" id="bookingsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Student / Faculty</th>
+              <th>Resource</th>
+              <th>Event</th>
+              <th>Date & Time</th>
+              <th>Status</th>
+              <th style="text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in all_bookings %}
+            <tr data-status="{{ b.booking_status }}">
+              <td style="color:var(--text-3);font-weight:700;font-size:.8rem;">#{{ b.booking_id }}</td>
+              <td>
+                <div style="font-weight:600;font-size:.88rem;">{{ b.user_name }}</div>
+                <div style="font-size:.74rem;color:var(--text-3);">{{ b.department or '—' }}</div>
+              </td>
+              <td style="font-weight:600;font-size:.88rem;">{{ b.resource_name }}</td>
+              <td style="color:var(--text-2);font-size:.82rem;">{{ b.event_name or '—' }}</td>
+              <td style="font-size:.78rem;font-variant-numeric:tabular-nums;color:var(--text-2);">
+                <div>{{ b.start_datetime }}</div>
+                <div style="color:var(--text-3);">→ {{ b.end_datetime }}</div>
+              </td>
+              <td><span class="pill pill-{{ b.booking_status }}">{{ b.booking_status | capitalize }}</span></td>
+              <td>
+                {% if b.booking_status == 'pending' %}
+                <div style="display:flex;gap:6px;justify-content:center;">
+                  <form method="POST" action="/admin/approve/{{ b.booking_id }}" style="margin:0;">
+                    <button type="submit" class="btn btn-success btn-sm" title="Approve this booking"
+                      style="background:var(--success);color:#fff;border:none;box-shadow:0 2px 8px rgba(5,150,105,.3);">
+                      ✅ Approve
+                    </button>
+                  </form>
+                  <form method="POST" action="/admin/reject/{{ b.booking_id }}"
+                        onsubmit="return confirm('Reject booking request #{{ b.booking_id }}?')" style="margin:0;">
+                    <button type="submit" class="btn btn-danger btn-sm" title="Reject this booking">
+                      ❌ Reject
+                    </button>
+                  </form>
+                </div>
+                {% elif b.booking_status == 'confirmed' %}
+                <div style="text-align:center;">
+                  <form method="POST" action="/admin/reject/{{ b.booking_id }}"
+                        onsubmit="return confirm('Cancel confirmed booking #{{ b.booking_id }}?')" style="margin:0;">
+                    <button type="submit" class="btn btn-danger btn-sm">Cancel</button>
+                  </form>
+                </div>
+                {% else %}
+                <div style="text-align:center;color:var(--text-3);font-size:.78rem;">—</div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">📋</div>
+        <h3>No bookings yet</h3>
+        <p>Booking requests will appear here as students and faculty make reservations.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ════════════════════════════════════════
+         TAB: EVENTS
+         ════════════════════════════════════════ -->
+    <div class="tab-content" id="tab-events" role="tabpanel">
+
+      <!-- ── Create Event Form ── -->
+      <div class="admin-form-card">
+        <div class="admin-form-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Create New Event
+        </div>
+        <form method="POST" action="/admin/create-event" id="createEventForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="ev_name">Event Name *</label>
+              <div class="input-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <input type="text" id="ev_name" name="event_name" class="form-input has-icon" placeholder="e.g. Tech Fest 2027" required/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ev_organiser">Organiser *</label>
+              <div class="input-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <input type="text" id="ev_organiser" name="organiser" class="form-input has-icon" placeholder="e.g. IT Department" required/>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="ev_location">Location *</label>
+              <div class="input-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <input type="text" id="ev_location" name="location" class="form-input has-icon" placeholder="e.g. Main Auditorium" required/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ev_date">Start Date *</label>
+              <div class="input-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <input type="date" id="ev_date" name="date" class="form-input has-icon" required/>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="ev_end_date">End Date <span style="font-weight:400;color:var(--text-3);">(optional — for multi-day)</span></label>
+              <div class="input-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <input type="date" id="ev_end_date" name="end_date" class="form-input has-icon"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ev_desc">Description</label>
+              <textarea id="ev_desc" name="description" class="form-textarea" placeholder="Brief description of the event…" style="min-height:56px;padding-left:14px;"></textarea>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Publish Event
+            </button>
+            <span style="font-size:.78rem;color:var(--text-3);">Event will appear on the Events page immediately.</span>
+          </div>
+        </form>
+      </div>
+
+      <!-- ── Events List ── -->
+      <div style="font-size:.8rem;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;">
+        {{ all_events | length }} Published Event(s)
+      </div>
+
+      {% if all_events %}
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr><th>ID</th><th>Event Name</th><th>Start</th><th>End</th><th>Location</th><th>Organiser</th><th>Link</th></tr>
+          </thead>
+          <tbody>
+            {% for e in all_events %}
+            <tr>
+              <td style="color:var(--text-3);font-weight:700;font-size:.8rem;">#{{ e.event_id }}</td>
+              <td style="font-weight:600;">{{ e.event_name }}</td>
+              <td style="color:var(--text-2);">{{ e.date | fmt_date }}</td>
+              <td style="color:var(--text-2);">{{ e.end_date | fmt_date if e.end_date and e.end_date != e.date else '—' }}</td>
+              <td style="color:var(--text-2);font-size:.82rem;">{{ e.location or '—' }}</td>
+              <td style="color:var(--text-2);font-size:.82rem;">{{ e.organiser or '—' }}</td>
+              <td>
+                <a href="/events/{{ e.event_id }}" class="btn btn-secondary btn-sm" style="font-size:.75rem;">View →</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:32px 0;">
+        <div class="empty-state-icon">📅</div>
+        <h3>No events yet</h3>
+        <p>Use the form above to publish your first event.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ════════════════════════════════════════
+         TAB: RESOURCES
+         ════════════════════════════════════════ -->
+    <div class="tab-content" id="tab-resources" role="tabpanel">
+
+      <!-- Toast notification -->
+      <div id="resToast" style="display:none;position:fixed;top:24px;right:24px;z-index:9999;
+           padding:14px 22px;border-radius:12px;font-size:.875rem;font-weight:600;
+           box-shadow:0 8px 30px rgba(0,0,0,.18);display:flex;align-items:center;gap:10px;
+           transition:opacity .3s;opacity:0;pointer-events:none;" aria-live="polite">
+        <span id="resToastIcon"></span><span id="resToastMsg"></span>
+      </div>
+
+      <!-- Delete confirmation modal -->
+      <div id="deleteModal" style="display:none;position:fixed;inset:0;z-index:9998;
+           background:rgba(0,0,0,.45);backdrop-filter:blur(4px);
+           align-items:center;justify-content:center;" role="dialog" aria-modal="true">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;
+             padding:32px 36px;max-width:420px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,.25);">
+          <div style="font-size:2.2rem;text-align:center;margin-bottom:14px;">🗑️</div>
+          <h3 style="text-align:center;margin-bottom:8px;font-size:1.1rem;">Delete Resource?</h3>
+          <p id="deleteModalMsg" style="text-align:center;color:var(--text-2);font-size:.875rem;margin-bottom:8px;"></p>
+          <p style="text-align:center;color:var(--danger);font-size:.8rem;margin-bottom:24px;
+             background:var(--danger-muted);padding:8px 12px;border-radius:8px;">
+            ⚠️ Active bookings for this resource will be cancelled automatically.
+          </p>
+          <div style="display:flex;gap:12px;justify-content:center;">
+            <button id="deleteCancelBtn" class="btn btn-secondary">Cancel</button>
+            <button id="deleteConfirmBtn" class="btn btn-danger">Yes, Delete</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Add Resource Form ── -->
+      <div class="admin-form-card" id="addResourceCard">
+        <div class="admin-form-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Add New Resource
+        </div>
+
+        <!-- Inline validation error -->
+        <div id="resFormError" style="display:none;align-items:center;gap:8px;padding:10px 14px;
+             border-radius:10px;background:var(--danger-muted);border:1px solid rgba(220,38,38,.25);
+             color:var(--danger);font-size:.83rem;margin-bottom:16px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="resFormErrorMsg"></span>
+        </div>
+
+        <form id="addResourceForm" novalidate>
+          <!-- Row 1: Type + Name -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="res_type">Resource Type *</label>
+              <div class="input-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                <select id="res_type" name="resource_type" class="form-select has-icon">
+                  <option value="">— Select type —</option>
+                  <option value="Lab">🖥️ Lab</option>
+                  <option value="Conference Room">🤝 Conference Room</option>
+                  <option value="Seminar Hall">🏛️ Seminar Hall</option>
+                  <option value="Projector">📽️ Projector</option>
+                  <option value="Auditorium">🎭 Auditorium</option>
+                  <option value="Classroom">📚 Classroom</option>
+                  <option value="Sports Facility">⚽ Sports Facility</option>
+                  <option value="Other">📦 Other</option>
+                </select>
+              </div>
+              <div class="field-error" id="err_type"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="res_name">Resource Name *</label>
+              <div class="input-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
+                <input type="text" id="res_name" name="resource_name" class="form-input has-icon"
+                       placeholder="e.g. Computer Lab 3" maxlength="100"/>
+              </div>
+              <div class="field-error" id="err_name"></div>
+            </div>
+          </div>
+
+          <!-- Row 2: Location + Capacity -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="res_loc">Location *</label>
+              <div class="input-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <input type="text" id="res_loc" name="location" class="form-input has-icon"
+                       placeholder="e.g. Building A - 3rd Floor" maxlength="100"/>
+              </div>
+              <div class="field-error" id="err_loc"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="res_cap">Seating Capacity</label>
+              <div class="input-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                <input type="number" id="res_cap" name="capacity" class="form-input has-icon"
+                       placeholder="e.g. 40" min="1" max="5000"/>
+              </div>
+              <div class="field-error" id="err_cap"></div>
+            </div>
+          </div>
+
+          <!-- Row 3: Available From → To -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="res_from">Available From</label>
+              <div class="input-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <input type="time" id="res_from" name="available_from" class="form-input has-icon"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="res_to">Available To</label>
+              <div class="input-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <input type="time" id="res_to" name="available_to" class="form-input has-icon"/>
+              </div>
+              <div class="field-error" id="err_time"></div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary" id="addResBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Resource
+            </button>
+            <button type="reset" class="btn btn-secondary" onclick="clearResForm()" style="font-size:.82rem;">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ── Resources List ── -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:.8rem;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;">
+          <span id="resCount">{{ all_resources | length }}</span> Resource(s)
+        </div>
+        <input type="search" id="resSearch" placeholder="🔍 Search resources…"
+               style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);
+                      background:var(--surface);color:var(--text);font-size:.82rem;width:200px;
+                      outline:none;transition:border-color .2s;"
+               oninput="filterResources(this.value)"/>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table" id="resourcesTable">
+          <thead>
+            <tr>
+              <th>ID</th><th>Type</th><th>Resource Name</th><th>Location</th>
+              <th>Capacity</th><th>Available Time</th><th>Status</th><th style="text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="resourcesTbody">
+            {% for r in all_resources %}
+            <tr id="res-row-{{ r.resource_id }}" data-name="{{ r.resource_name | lower }}" data-loc="{{ r.location | lower }}" data-type="{{ (r.resource_type or '') | lower }}">
+              <td style="color:var(--text-3);font-weight:700;font-size:.8rem;">#{{ r.resource_id }}</td>
+              <td>
+                <span style="font-size:.75rem;padding:3px 10px;border-radius:20px;
+                      background:var(--primary-muted,rgba(99,102,241,.1));color:var(--primary);
+                      font-weight:600;white-space:nowrap;">{{ r.resource_type or 'Other' }}</span>
+              </td>
+              <td style="font-weight:600;">{{ r.resource_name }}</td>
+              <td style="color:var(--text-2);font-size:.85rem;">{{ r.location }}</td>
+              <td>{{ r.capacity or '—' }}</td>
+              <td style="font-size:.8rem;color:var(--text-2);white-space:nowrap;">
+                {% if r.available_from and r.available_to %}
+                  {{ r.available_from | string | truncate(5,True,'') }} – {{ r.available_to | string | truncate(5,True,'') }}
+                {% else %}
+                  <span style="color:var(--text-3);">All day</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="pill {{ 'pill-available' if r.status == 'Available' else 'pill-cancelled' }}"
+                      id="res-status-{{ r.resource_id }}">{{ r.status }}</span>
+              </td>
+              <td>
+                <div style="display:flex;gap:6px;justify-content:center;">
+                  <button class="btn btn-secondary btn-sm" title="Toggle availability"
+                          style="font-size:.72rem;padding:4px 10px;"
+                          onclick="toggleResource({{ r.resource_id }}, this)">
+                    {{ '🔴 Disable' if r.status == 'Available' else '🟢 Enable' }}
+                  </button>
+                  <button class="btn btn-danger btn-sm" title="Delete resource"
+                          style="font-size:.72rem;padding:4px 10px;"
+                          onclick="confirmDelete({{ r.resource_id }}, '{{ r.resource_name | replace("'", "\\'" ) }}')">
+                    🗑️ Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr id="emptyResRow">
+              <td colspan="8" style="text-align:center;padding:40px 0;color:var(--text-3);">
+                <div style="font-size:2rem;margin-bottom:8px;">🖥️</div>
+                No resources yet. Add one above.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* Resource management styles */
+.field-error { color:var(--danger,#dc2626); font-size:.75rem; margin-top:4px; min-height:1em; }
+.form-input.invalid, .form-select.invalid { border-color:var(--danger,#dc2626) !important; }
+#resSearch:focus { border-color:var(--primary); }
+@keyframes slideInToast {
+  from { opacity:0; transform:translateY(-12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+</style>
+<script>
+/* ── Tab switching ────────────────────────── */
+function switchTab(name) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const tabBtn = document.querySelector(`.admin-tab[data-tab="${name}"]`);
+  const tabPanel = document.getElementById(`tab-${name}`);
+  if (tabBtn)   tabBtn.classList.add('active');
+  if (tabPanel) tabPanel.classList.add('active');
+}
+document.querySelectorAll('.admin-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+});
+
+/* ── URL hash navigation ─────────────────── */
+const hash = window.location.hash.replace('#tab-','').replace('#','');
+if (['bookings','events','resources'].includes(hash)) switchTab(hash);
+
+/* ── Booking filter (client-side) ────────── */
+function filterBookings(status, btn) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  const rows = document.querySelectorAll('#bookingsTable tbody tr');
+  rows.forEach(r => {
+    r.style.display = (status === 'all' || r.dataset.status === status) ? '' : 'none';
+  });
+}
+
+/* ── Date auto-fill for event form ──────── */
+const evDateInput = document.getElementById('ev_date');
+const evEndInput  = document.getElementById('ev_end_date');
+if (evDateInput) {
+  const today = new Date().toISOString().split('T')[0];
+  evDateInput.min = today;
+  // When start date changes, set end date min
+  evDateInput.addEventListener('change', () => {
+    if (evEndInput) evEndInput.min = evDateInput.value;
+  });
+}
+
+/* ════════════════════════════════════════════════════
+   RESOURCE MANAGEMENT — AJAX (no page reload)
+   ════════════════════════════════════════════════════ */
+
+/* ── Toast ──────────────────────────────────────────── */
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('resToast');
+  const icon = document.getElementById('resToastIcon');
+  const msgEl = document.getElementById('resToastMsg');
+  icon.textContent  = type === 'success' ? '✅' : '❌';
+  msgEl.textContent = msg;
+  t.style.background = type === 'success'
+    ? 'linear-gradient(135deg,#22c55e,#16a34a)'
+    : 'linear-gradient(135deg,#ef4444,#dc2626)';
+  t.style.color   = '#fff';
+  t.style.display = 'flex';
+  t.style.animation = 'slideInToast .35s ease';
+  t.style.opacity = '1';
+  t.style.pointerEvents = 'none';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => {
+    t.style.opacity = '0';
+    setTimeout(() => { t.style.display = 'none'; }, 350);
+  }, 3200);
+}
+
+/* ── Field validation helpers ───────────────────────── */
+function fieldErr(id, msg) {
+  const el = document.getElementById('err_' + id);
+  if (el) el.textContent = msg;
+  const inp = document.getElementById('res_' + id) || document.getElementById('res' + id);
+  if (inp) inp.classList.toggle('invalid', !!msg);
+}
+function clearFieldErrs() {
+  ['type','name','loc','cap','time'].forEach(k => fieldErr(k, ''));
+  const fe = document.getElementById('resFormError');
+  if (fe) fe.style.display = 'none';
+}
+function showFormError(msg) {
+  const fe = document.getElementById('resFormError');
+  const fm = document.getElementById('resFormErrorMsg');
+  if (fe && fm) { fm.textContent = msg; fe.style.display = 'flex'; }
+}
+
+/* ── Validate form before submit ────────────────────── */
+function validateResForm() {
+  clearFieldErrs();
+  let valid = true;
+  const type = document.getElementById('res_type').value.trim();
+  const name = document.getElementById('res_name').value.trim();
+  const loc  = document.getElementById('res_loc').value.trim();
+  const cap  = document.getElementById('res_cap').value;
+  const from = document.getElementById('res_from').value;
+  const to   = document.getElementById('res_to').value;
+
+  if (!type) { fieldErr('type', 'Please select a resource type.'); valid = false; }
+  if (!name) { fieldErr('name', 'Resource name is required.'); valid = false; }
+  else if (name.length < 2) { fieldErr('name', 'Name must be at least 2 characters.'); valid = false; }
+  if (!loc)  { fieldErr('loc',  'Location is required.'); valid = false; }
+  if (cap && (parseInt(cap) < 1 || parseInt(cap) > 5000)) {
+    fieldErr('cap', 'Capacity must be between 1 and 5000.'); valid = false;
+  }
+  if (from && to && from >= to) {
+    fieldErr('time', '"Available To" must be after "Available From".'); valid = false;
+  }
+  if (!valid) showFormError('Please fix the errors highlighted above.');
+  return valid;
+}
+
+/* ── AJAX: Add Resource ─────────────────────────────── */
+document.getElementById('addResourceForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!validateResForm()) return;
+
+  const btn = document.getElementById('addResBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg class="spin-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Adding…';
+
+  const fd = new FormData(document.getElementById('addResourceForm'));
+  try {
+    const res = await fetch('/admin/add-resource-ajax', {
+      method: 'POST',
+      body: fd
+    });
+    const data = await res.json();
+    if (data.ok) {
+      insertResourceRow(data.resource);
+      document.getElementById('addResourceForm').reset();
+      clearFieldErrs();
+      updateResCount(1);
+      showToast(`"${data.resource.resource_name}" added successfully!`);
+    } else {
+      showFormError(data.error || 'Failed to add resource.');
+      showToast(data.error || 'Failed to add resource.', 'error');
+    }
+  } catch(err) {
+    showFormError('Network error. Please try again.');
+    showToast('Network error.', 'error');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Resource';
+});
+
+/* ── Insert a new row into the table ────────────────── */
+function insertResourceRow(r) {
+  const tbody = document.getElementById('resourcesTbody');
+  const empty = document.getElementById('emptyResRow');
+  if (empty) empty.remove();
+  const timeCell = (r.available_from && r.available_to)
+    ? `${r.available_from.slice(0,5)} – ${r.available_to.slice(0,5)}`
+    : `<span style="color:var(--text-3);">All day</span>`;
+  const row = document.createElement('tr');
+  row.id = `res-row-${r.resource_id}`;
+  row.dataset.name = (r.resource_name || '').toLowerCase();
+  row.dataset.loc  = (r.location || '').toLowerCase();
+  row.dataset.type = (r.resource_type || '').toLowerCase();
+  row.style.animation = 'slideInToast .3s ease';
+  row.innerHTML = `
+    <td style="color:var(--text-3);font-weight:700;font-size:.8rem;">#${r.resource_id}</td>
+    <td><span style="font-size:.75rem;padding:3px 10px;border-radius:20px;
+         background:rgba(99,102,241,.1);color:var(--primary);font-weight:600;white-space:nowrap;">
+      ${r.resource_type || 'Other'}</span></td>
+    <td style="font-weight:600;">${escHtml(r.resource_name)}</td>
+    <td style="color:var(--text-2);font-size:.85rem;">${escHtml(r.location)}</td>
+    <td>${r.capacity || '—'}</td>
+    <td style="font-size:.8rem;color:var(--text-2);white-space:nowrap;">${timeCell}</td>
+    <td><span class="pill pill-available" id="res-status-${r.resource_id}">Available</span></td>
+    <td>
+      <div style="display:flex;gap:6px;justify-content:center;">
+        <button class="btn btn-secondary btn-sm" style="font-size:.72rem;padding:4px 10px;"
+                onclick="toggleResource(${r.resource_id}, this)">🔴 Disable</button>
+        <button class="btn btn-danger btn-sm" style="font-size:.72rem;padding:4px 10px;"
+                onclick="confirmDelete(${r.resource_id}, '${escHtml(r.resource_name).replace(/'/g,"\\'")}')">🗑️ Delete</button>
+      </div>
+    </td>`;
+  tbody.prepend(row);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Update resource counter ────────────────────────── */
+function updateResCount(delta) {
+  const el = document.getElementById('resCount');
+  if (el) el.textContent = Math.max(0, parseInt(el.textContent || '0') + delta);
+}
+
+/* ── AJAX: Toggle Resource Status ───────────────────── */
+async function toggleResource(rid, btn) {
+  btn.disabled = true;
+  try {
+    const res  = await fetch(`/admin/toggle-resource-ajax/${rid}`, { method:'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      const pill = document.getElementById(`res-status-${rid}`);
+      if (pill) {
+        pill.textContent = data.new_status;
+        pill.className   = `pill ${data.new_status === 'Available' ? 'pill-available' : 'pill-cancelled'}`;
+      }
+      btn.textContent = data.new_status === 'Available' ? '🔴 Disable' : '🟢 Enable';
+      showToast(`Resource ${data.new_status === 'Available' ? 'enabled' : 'disabled'}.`);
+    }
+  } catch(e) { showToast('Toggle failed.', 'error'); }
+  btn.disabled = false;
+}
+
+/* ── Delete Modal ───────────────────────────────────── */
+let _deleteTarget = null;
+function confirmDelete(rid, name) {
+  _deleteTarget = rid;
+  document.getElementById('deleteModalMsg').textContent =
+    `You are about to permanently delete "${name}".`;
+  const modal = document.getElementById('deleteModal');
+  modal.style.display = 'flex';
+}
+document.getElementById('deleteCancelBtn').onclick = () => {
+  document.getElementById('deleteModal').style.display = 'none';
+  _deleteTarget = null;
+};
+document.getElementById('deleteModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    e.currentTarget.style.display = 'none';
+    _deleteTarget = null;
+  }
+});
+document.getElementById('deleteConfirmBtn').onclick = async () => {
+  if (!_deleteTarget) return;
+  const rid = _deleteTarget;
+  const btn = document.getElementById('deleteConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting…';
+  document.getElementById('deleteModal').style.display = 'none';
+  try {
+    const res  = await fetch(`/admin/delete-resource-ajax/${rid}`, { method:'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      const row = document.getElementById(`res-row-${rid}`);
+      if (row) {
+        row.style.transition = 'opacity .3s, transform .3s';
+        row.style.opacity = '0'; row.style.transform = 'translateX(30px)';
+        setTimeout(() => {
+          row.remove();
+          updateResCount(-1);
+          if (!document.querySelector('#resourcesTbody tr')) {
+            document.getElementById('resourcesTbody').innerHTML =
+              `<tr id="emptyResRow"><td colspan="8" style="text-align:center;padding:40px 0;color:var(--text-3);">
+                <div style="font-size:2rem;margin-bottom:8px;">🖥️</div>No resources yet. Add one above.</td></tr>`;
+          }
+        }, 300);
+      }
+      showToast(`Resource deleted. ${data.bookings_cancelled > 0 ? data.bookings_cancelled + ' booking(s) cancelled.' : ''}`);
+    } else {
+      showToast(data.error || 'Delete failed.', 'error');
+    }
+  } catch(e) { showToast('Network error.', 'error'); }
+  btn.disabled = false; btn.textContent = 'Yes, Delete';
+  _deleteTarget = null;
+};
+
+/* ── Live search filter ─────────────────────────────── */
+function filterResources(q) {
+  q = q.toLowerCase().trim();
+  document.querySelectorAll('#resourcesTbody tr').forEach(row => {
+    if (row.id === 'emptyResRow') return;
+    const match = !q ||
+      (row.dataset.name || '').includes(q) ||
+      (row.dataset.loc  || '').includes(q) ||
+      (row.dataset.type || '').includes(q);
+    row.style.display = match ? '' : 'none';
+  });
+}
+
+/* ── Clear form helper ──────────────────────────────── */
+function clearResForm() {
+  clearFieldErrs();
+  const fe = document.getElementById('resFormError');
+  if (fe) fe.style.display = 'none';
+}
+</script>
+{% endblock %}
