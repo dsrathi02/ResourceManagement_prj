@@ -2,11 +2,13 @@
 from flask import (Flask, jsonify, render_template, request,
                    redirect, url_for, session, flash)
 import mysql.connector
+import os
 import re
 from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = 'reserva_campus_2026_secret'
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-fallback-key-change-in-production')
 
 
 # ─── Template Filters ─────────────────────────────────────────────────────────
@@ -105,12 +107,11 @@ def login():
         email    = request.form.get('email', '').strip()
         password = request.form.get('password', '').strip()
         conn = get_db(); cursor = conn.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT * FROM user WHERE email=%s AND password=%s",
-            (email, password))
+        cursor.execute("SELECT * FROM user WHERE email=%s", (email,))
         user = cursor.fetchone()
         conn.close()
-        if user:
+        if user and check_password_hash(user['password'], password):
+            session.clear()
             session.update({
                 'user_id':    user['user_id'],
                 'name':       f"{user['first_name']} {user['last_name']}",
@@ -148,7 +149,7 @@ def signup():
                 cursor.execute(
                     "INSERT INTO user (first_name,last_name,department,email,password,role)"
                     " VALUES (%s,%s,%s,%s,%s,%s)",
-                    (fn, ln, dept, email, pw, role))
+                    (fn, ln, dept, email, generate_password_hash(pw), role))
                 conn.commit(); uid = cursor.lastrowid; conn.close()
                 session.update({'user_id': uid, 'name': f"{fn} {ln}",
                                 'role': role, 'email': email, 'department': dept})

@@ -1,8 +1,8 @@
 -- Reserva — seed.sql
 -- Sample data. Run after schema.sql, against the same database.
--- Passwords are plaintext demo values here; Stage 4's
--- hash_existing_passwords.py converts them to hashes before the app relies
--- on werkzeug's check_password_hash.
+-- user.password values below are werkzeug generate_password_hash() output
+-- (scrypt) for the plaintext demo passwords listed at the bottom of this
+-- file. A fresh schema.sql + seed.sql load never inserts plaintext.
 
 USE mini_project;
 
@@ -26,10 +26,10 @@ VALUES
 
 -- ── user ─────────────────────────────────────────────────────────────────
 INSERT INTO user (user_id, first_name, last_name, department, email, password, role) VALUES
-    (1, 'Amit',  'Sharma',   'IT',    'amit@gmail.com',     'student123', 'Student'),
-    (2, 'Sneha', 'Patil',    'EXTC',  'sneha@gmail.com',    'student123', 'Student'),
-    (3, 'Dr',    'Kulkarni', 'IT',    'kulkarni@gmail.com', 'faculty123', 'Faculty'),
-    (4, 'Admin', 'Joshi',    'Admin', 'admin@gmail.com',    'admin123',   'Admin');
+    (1, 'Amit',  'Sharma',   'IT',    'amit@gmail.com',     'scrypt:32768:8:1$1315ZY9yp6L4YBoj$be38610bd95600adb6b2754ea1f313b13ed2187f5ee01719cc5401d23400a8ac410e14b4c071cd5b7d11a0b02b8ab87c4bc82fc378cc6d15ee7d6c0acd27edb7', 'Student'),
+    (2, 'Sneha', 'Patil',    'EXTC',  'sneha@gmail.com',    'scrypt:32768:8:1$rUTgEo06OWy66hCp$64d6a4adf7dbb489b872b90e5efd51950791749cec014c930901443028b135c2262038cf35c8b3d734b4c7e90e688ea09dc4991b2acdc2d4c4acc72787bef85a', 'Student'),
+    (3, 'Dr',    'Kulkarni', 'IT',    'kulkarni@gmail.com', 'scrypt:32768:8:1$hs8qEmfQUyUR3xQm$8a1eecdef433aee3b5d2873f7367c4c3643e4adbe42ef295416b997e54275c416d6a0ba1f816b015df0d4a524fd6739fcf256ca8e0c8fa34eabcd36bf60100d1', 'Faculty'),
+    (4, 'Admin', 'Joshi',    'Admin', 'admin@gmail.com',    'scrypt:32768:8:1$G3pqVD7i1UOdjOMQ$8b4572129620c30ff738c6bc3fd2f0cd18c581415dc29e9baa8efa31b0f80a4a4cad478157dda09384ca52ddf3fa0cbd99384081125c9987b59ba7f67da2af11', 'Admin');
 
 -- ── user_phone ───────────────────────────────────────────────────────────
 INSERT INTO user_phone (user_id, phone_no) VALUES
@@ -70,7 +70,7 @@ INSERT INTO announcement (announcement_id, title, body, priority) VALUES
         'All seminar hall bookings now require faculty approval at least 48 hours in advance.',
         'normal');
 
--- Demo credentials (plaintext until Stage 4 hashes them):
+-- Demo credentials (password column above stores the werkzeug hash, not these):
 --   Student : amit@gmail.com     / student123
 --   Faculty : kulkarni@gmail.com / faculty123
 --   Admin   : admin@gmail.com    / admin123
