@@ -105,15 +105,10 @@ def login():
         email    = request.form.get('email', '').strip()
         password = request.form.get('password', '').strip()
         conn = get_db(); cursor = conn.cursor(dictionary=True)
-        try:
-            cursor.execute(
-                "SELECT * FROM user WHERE email=%s AND password=%s",
-                (email, password))
-            user = cursor.fetchone()
-        except mysql.connector.errors.ProgrammingError:
-            # password column may not exist yet → demo: match by email only
-            cursor.execute("SELECT * FROM user WHERE email=%s", (email,))
-            user = cursor.fetchone()
+        cursor.execute(
+            "SELECT * FROM user WHERE email=%s AND password=%s",
+            (email, password))
+        user = cursor.fetchone()
         conn.close()
         if user:
             session.update({
@@ -150,16 +145,10 @@ def signup():
         else:
             conn = get_db(); cursor = conn.cursor()
             try:
-                try:
-                    cursor.execute(
-                        "INSERT INTO user (first_name,last_name,department,email,password,role,priority)"
-                        " VALUES (%s,%s,%s,%s,%s,%s,1)",
-                        (fn, ln, dept, email, pw, role))
-                except mysql.connector.errors.ProgrammingError:
-                    cursor.execute(
-                        "INSERT INTO user (first_name,last_name,department,email,role,priority)"
-                        " VALUES (%s,%s,%s,%s,%s,1)",
-                        (fn, ln, dept, email, role))
+                cursor.execute(
+                    "INSERT INTO user (first_name,last_name,department,email,password,role)"
+                    " VALUES (%s,%s,%s,%s,%s,%s)",
+                    (fn, ln, dept, email, pw, role))
                 conn.commit(); uid = cursor.lastrowid; conn.close()
                 session.update({'user_id': uid, 'name': f"{fn} {ln}",
                                 'role': role, 'email': email, 'department': dept})
@@ -210,11 +199,9 @@ def dashboard():
         e.setdefault('end_date', e['date'])
         e.setdefault('description', '')
 
-    try:
-        cursor.execute(
-            "SELECT * FROM announcement ORDER BY priority DESC, created_at DESC LIMIT 4")
-        announcements = cursor.fetchall()
-    except: announcements = []
+    cursor.execute(
+        "SELECT * FROM announcement ORDER BY priority DESC, created_at DESC LIMIT 4")
+    announcements = cursor.fetchall()
 
     cursor.execute("SELECT COUNT(*) c FROM resources WHERE status='Available'")
     avail = cursor.fetchone()['c']
@@ -498,16 +485,11 @@ def reject_booking(bid):
 def create_event():
     f = request.form
     conn = get_db(); cursor = conn.cursor()
-    try:
-        cursor.execute(
-            "INSERT INTO event (event_name,date,end_date,location,organiser,description)"
-            " VALUES (%s,%s,%s,%s,%s,%s)",
-            (f.get('event_name'), f.get('date'), f.get('end_date') or f.get('date'),
-             f.get('location'), f.get('organiser'), f.get('description','')))
-    except mysql.connector.errors.OperationalError:
-        cursor.execute(
-            "INSERT INTO event (event_name,date,location,organiser) VALUES (%s,%s,%s,%s)",
-            (f.get('event_name'), f.get('date'), f.get('location'), f.get('organiser')))
+    cursor.execute(
+        "INSERT INTO event (event_name,date,end_date,location,organiser,description)"
+        " VALUES (%s,%s,%s,%s,%s,%s)",
+        (f.get('event_name'), f.get('date'), f.get('end_date') or f.get('date'),
+         f.get('location'), f.get('organiser'), f.get('description','')))
     conn.commit(); conn.close()
     return redirect(url_for('admin_panel') + '#tab-events')
 
