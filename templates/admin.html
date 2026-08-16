@@ -728,7 +728,7 @@ document.getElementById('deleteConfirmBtn').onclick = async () => {
           }
         }, 300);
       }
-      showToast(`Resource deleted. ${data.bookings_cancelled > 0 ? data.bookings_cancelled + ' booking(s) cancelled.' : ''}`);
+      showToast('Resource deleted.');
     } else {
       showToast(data.error || 'Delete failed.', 'error');
     }

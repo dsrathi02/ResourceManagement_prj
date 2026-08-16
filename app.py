@@ -144,19 +144,30 @@ def signup():
             error = ('Your password must be at least 8 characters and include '
                      'at least one uppercase letter, one number, and one special character.')
         else:
-            conn = get_db(); cursor = conn.cursor()
+            conn = get_db()
+            conn.start_transaction()
+            cursor = conn.cursor()
+            uid = None
             try:
                 cursor.execute(
                     "INSERT INTO user (first_name,last_name,department,email,password,role)"
                     " VALUES (%s,%s,%s,%s,%s,%s)",
                     (fn, ln, dept, email, generate_password_hash(pw), role))
-                conn.commit(); uid = cursor.lastrowid; conn.close()
+                conn.commit()
+                uid = cursor.lastrowid
+            except mysql.connector.IntegrityError:
+                conn.rollback()
+                error = 'Email already registered. Please log in.'
+            except Exception:
+                conn.rollback()
+                raise
+            finally:
+                cursor.close()
+                conn.close()
+            if uid is not None:
                 session.update({'user_id': uid, 'name': f"{fn} {ln}",
                                 'role': role, 'email': email, 'department': dept})
                 return redirect(url_for('dashboard'))
-            except mysql.connector.IntegrityError:
-                conn.close()
-                error = 'Email already registered. Please log in.'
     return render_template('signup.html', error=error)
 
 @app.route('/logout')
@@ -331,26 +342,38 @@ def booking_page():
         else:
             start_dt = f"{date} {st}:00"
             end_dt   = f"{date} {et}:00"
-            cursor.execute("""
-                SELECT booking_id FROM booking
-                WHERE resource_id=%s AND booking_status!='cancelled'
-                  AND NOT (%s >= end_datetime OR %s <= start_datetime)
-            """, (rid, start_dt, end_dt))
-            if cursor.fetchone():
-                error = 'This resource is already booked for that time slot. Pick a different time.'
-            else:
-                if not eid and ename:
-                    cursor.execute(
-                        "INSERT INTO event (event_name,date,organiser,location) VALUES (%s,%s,%s,'TBD')",
-                        (ename, date, session['name']))
-                    conn.commit(); eid = cursor.lastrowid
+            # Earlier reads on this same connection (resources, events,
+            # booking history above) left an implicit transaction open;
+            # close it before starting the explicit one for the write.
+            conn.commit()
+            conn.start_transaction()
+            try:
                 cursor.execute("""
-                    INSERT INTO booking
-                      (user_id,resource_id,start_datetime,end_datetime,booking_status,event_id)
-                    VALUES (%s,%s,%s,%s,'pending',%s)
-                """, (session['user_id'], rid, start_dt, end_dt, eid))
-                conn.commit(); bid = cursor.lastrowid; conn.close()
-                return redirect(url_for('my_bookings') + f'?success={bid}')
+                    SELECT booking_id FROM booking
+                    WHERE resource_id=%s AND booking_status!='cancelled'
+                      AND NOT (%s >= end_datetime OR %s <= start_datetime)
+                """, (rid, start_dt, end_dt))
+                if cursor.fetchone():
+                    conn.rollback()
+                    error = 'This resource is already booked for that time slot. Pick a different time.'
+                else:
+                    if not eid and ename:
+                        cursor.execute(
+                            "INSERT INTO event (event_name,date,organiser,location) VALUES (%s,%s,%s,'TBD')",
+                            (ename, date, session['name']))
+                        eid = cursor.lastrowid
+                    cursor.execute("""
+                        INSERT INTO booking
+                          (user_id,resource_id,start_datetime,end_datetime,booking_status,event_id)
+                        VALUES (%s,%s,%s,%s,'pending',%s)
+                    """, (session['user_id'], rid, start_dt, end_dt, eid))
+                    conn.commit()
+                    bid = cursor.lastrowid
+                    conn.close()
+                    return redirect(url_for('my_bookings') + f'?success={bid}')
+            except Exception:
+                conn.rollback()
+                raise
 
     conn.close()
     return render_template('booking.html', resources=resources, events=evts, error=error,
@@ -466,19 +489,55 @@ def admin_panel():
 @app.route('/admin/approve/<int:bid>', methods=['POST'])
 @admin_required
 def approve_booking(bid):
-    conn = get_db(); cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE booking SET booking_status='confirmed', approved_by=%s WHERE booking_id=%s",
-        (session['user_id'], bid))
-    conn.commit(); conn.close()
+    conn = get_db()
+    conn.start_transaction()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT booking_status FROM booking WHERE booking_id=%s", (bid,))
+        row = cursor.fetchone()
+        if not row:
+            conn.rollback()
+            flash('Cannot approve: booking not found.', 'error')
+        elif row['booking_status'] != 'pending':
+            conn.rollback()
+            flash(f"Cannot approve: booking is already {row['booking_status']}.", 'error')
+        else:
+            cursor.execute(
+                "UPDATE booking SET booking_status='confirmed', approved_by=%s WHERE booking_id=%s",
+                (session['user_id'], bid))
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/reject/<int:bid>', methods=['POST'])
 @admin_required
 def reject_booking(bid):
-    conn = get_db(); cursor = conn.cursor()
-    cursor.execute("UPDATE booking SET booking_status='cancelled' WHERE booking_id=%s", (bid,))
-    conn.commit(); conn.close()
+    conn = get_db()
+    conn.start_transaction()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT booking_status FROM booking WHERE booking_id=%s", (bid,))
+        row = cursor.fetchone()
+        if not row:
+            conn.rollback()
+            flash('Cannot reject: booking not found.', 'error')
+        elif row['booking_status'] not in ('pending', 'confirmed'):
+            conn.rollback()
+            flash(f"Cannot reject: booking is already {row['booking_status']}.", 'error')
+        else:
+            cursor.execute("UPDATE booking SET booking_status='cancelled' WHERE booking_id=%s", (bid,))
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
     return redirect(url_for('admin_panel'))
 
 @app.route('/admin/create-event', methods=['POST'])
@@ -558,28 +617,41 @@ def add_resource_ajax():
 @app.route('/admin/delete-resource/<int:rid>', methods=['POST'])
 @admin_required
 def delete_resource(rid):
-    conn = get_db(); cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE booking SET booking_status='cancelled' WHERE resource_id=%s AND booking_status IN ('pending','confirmed')",
-        (rid,))
-    cursor.execute("DELETE FROM resources WHERE resource_id=%s", (rid,))
-    conn.commit(); conn.close()
+    conn = get_db()
+    conn.start_transaction()
+    cursor = conn.cursor()
+    try:
+        # ON DELETE CASCADE on booking.resource_id removes this resource's
+        # bookings along with it; no separate UPDATE needed or effective.
+        cursor.execute("DELETE FROM resources WHERE resource_id=%s", (rid,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
     return redirect(url_for('admin_panel') + '#tab-resources')
 
 @app.route('/admin/delete-resource-ajax/<int:rid>', methods=['POST'])
 @admin_required
 def delete_resource_ajax(rid):
     """AJAX endpoint — returns JSON."""
-    conn = get_db(); cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE booking SET booking_status='cancelled' WHERE resource_id=%s AND booking_status IN ('pending','confirmed')",
-        (rid,))
-    cancelled = cursor.rowcount
-    cursor.execute("DELETE FROM resources WHERE resource_id=%s", (rid,))
-    deleted = cursor.rowcount
-    conn.commit(); conn.close()
+    conn = get_db()
+    conn.start_transaction()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM resources WHERE resource_id=%s", (rid,))
+        deleted = cursor.rowcount
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
     if deleted:
-        return jsonify({'ok': True, 'bookings_cancelled': cancelled})
+        return jsonify({'ok': True})
     return jsonify({'ok': False, 'error': 'Resource not found.'}), 404
 
 @app.route('/admin/toggle-resource/<int:rid>', methods=['POST'])
