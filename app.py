@@ -348,11 +348,17 @@ def booking_page():
             conn.commit()
             conn.start_transaction()
             try:
+                # FOR UPDATE takes row/gap locks on the idx_booking_resource_dates
+                # range this WHERE clause covers, so a second transaction running
+                # this same SELECT blocks until this one commits or rolls back —
+                # closing the check-then-act race between the SELECT and the
+                # INSERT below.
                 cursor.execute("""
                     SELECT booking_id FROM booking
-                    WHERE resource_id=%s AND booking_status!='cancelled'
-                      AND NOT (%s >= end_datetime OR %s <= start_datetime)
-                """, (rid, start_dt, end_dt))
+                    WHERE resource_id=%s AND booking_status IN ('pending','confirmed')
+                      AND start_datetime < %s AND end_datetime > %s
+                    FOR UPDATE
+                """, (rid, end_dt, start_dt))
                 if cursor.fetchone():
                     conn.rollback()
                     error = 'This resource is already booked for that time slot. Pick a different time.'
@@ -371,6 +377,12 @@ def booking_page():
                     bid = cursor.lastrowid
                     conn.close()
                     return redirect(url_for('my_bookings') + f'?success={bid}')
+            except mysql.connector.errors.DatabaseError as e:
+                conn.rollback()
+                if e.errno == 1213:  # deadlock
+                    error = 'A conflicting request was being processed. Please try again.'
+                else:
+                    raise
             except Exception:
                 conn.rollback()
                 raise
